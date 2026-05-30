@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { communityHelp, mockWorkspaceContext, type CommunityHelpRequest } from "@help-me-comms/core";
+import { communityHelp, composeDraft, mockWorkspaceContext, type CommunityHelpRequest } from "@help-me-comms/core";
 import { createDefaultMockAdapters } from "@help-me-comms/adapters";
 
 const adapters = createDefaultMockAdapters();
@@ -42,7 +42,17 @@ async function run(mode: string, prefix?: string) {
   try {
     const request: CommunityHelpRequest = { userMessage: message, mode: mode as CommunityHelpRequest["mode"] };
     const data = await communityHelp(request, mockWorkspaceContext, adapters);
-    p.webview.postMessage({ type: "result", data });
+    // Generate an authentic draft reply alongside the answer (forum voice — the
+    // dev/modder register). It's a DRAFT: approval/copy happens in the webview.
+    const draft = composeDraft({
+      kind: prefix?.toLowerCase().includes("issue") ? "known_issue" : "reply",
+      source: "forum",
+      topic: selection.slice(0, 120),
+      intent: data.intent,
+      evidence: data.evidence,
+      prevalence: data.confidence,
+    });
+    p.webview.postMessage({ type: "result", data, draft });
   } catch (error) {
     p.webview.postMessage({ type: "error", message: error instanceof Error ? error.message : String(error), url: "in-extension" });
   }
@@ -122,6 +132,13 @@ function renderHtml(webview: vscode.Webview): string {
     .skel{height:14px;border-radius:7px;margin:6px 0;background:linear-gradient(90deg,rgba(255,255,255,.05),rgba(255,255,255,.14),rgba(255,255,255,.05));background-size:200% 100%;animation:sh 1.2s linear infinite;}
     @keyframes sh{to{background-position:-200% 0;}}
     .muted{color:var(--muted);font-size:12.5px;}
+    .dtitle{font-size:14px;font-weight:700;color:var(--ink);margin:4px 0;}
+    .dbody{width:100%;min-height:120px;resize:vertical;background:rgba(3,6,14,.5);color:#dce6ff;border:1px solid rgba(255,255,255,.10);border-radius:11px;padding:11px;font:inherit;font-size:13px;line-height:1.5;outline:none;margin-top:6px;}
+    .dbody:focus{border-color:rgba(76,194,255,.5);}
+    .dactions{display:flex;gap:8px;margin-top:8px;}
+    .dbtn{border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);color:var(--ink);border-radius:11px;padding:8px 14px;font:inherit;font-size:12.5px;font-weight:700;cursor:pointer;}
+    .dbtn.copy:hover{border-color:rgba(76,194,255,.5);color:var(--steel);}
+    .pv2{display:block;font-size:10.5px;color:var(--faint);margin-top:8px;}
   `;
 
   // Main script: plain JS, no backticks / template literals (keeps the outer
@@ -134,7 +151,7 @@ function renderHtml(webview: vscode.Webview): string {
     "function clear(){root.innerHTML='';}",
     "function loading(q){clear();var c=E('div','card glass');c.appendChild(E('div','lbl','Asking about'));var m=E('div','muted',q);c.appendChild(m);var s1=E('div','skel');s1.style.width='40%';var s2=E('div','skel');s2.style.width='90%';var s3=E('div','skel');s3.style.width='70%';c.appendChild(s1);c.appendChild(s2);c.appendChild(s3);root.appendChild(c);}",
     "function error(msg,url){clear();var c=E('div','card glass');c.appendChild(E('div','answer','Could not reach '+url+'/api/community-help'));c.appendChild(E('div','muted',msg+'  ·  run: pnpm --filter @help-me-comms/web dev'));root.appendChild(c);}",
-    "function render(d){clear();var c=E('div','card glass');",
+    "function render(d,draft){clear();var c=E('div','card glass');",
     "var cr=E('div','chiprow');var st=E('span',(d.status==='ok'?'chip ok':'chip'),(d.status||'ok').replace(/_/g,' '));cr.appendChild(st);if(d.intent){cr.appendChild(E('span','chip',d.intent.replace(/_/g,' ')));}c.appendChild(cr);",
     "if(d.answer){c.appendChild(E('div','answer',d.answer));}",
     "if(typeof d.confidence==='number'){var pct=Math.round(d.confidence*100);c.appendChild(E('div','lbl','Confidence'));var mw=E('div','mwrap');var mt=E('div','meter');var fi=E('i');fi.style.width=pct+'%';mt.appendChild(fi);mw.appendChild(mt);mw.appendChild(E('span','mval',pct+'%'));c.appendChild(mw);}",
@@ -143,8 +160,9 @@ function renderHtml(webview: vscode.Webview): string {
     "if(d.followupQuestion){var fu=E('div','fu');fu.appendChild(E('span','q','*'));fu.appendChild(E('span',null,d.followupQuestion));c.appendChild(fu);}",
     "if(d.suggestedActions&&d.suggestedActions.length){c.appendChild(E('div','lbl','Suggested next actions'));d.suggestedActions.forEach(function(a){var ac=E('div','act');ac.appendChild(E('span',null,a.label));if(a.requiresApproval){ac.appendChild(E('span','gate','Approval'));}c.appendChild(ac);});}",
     "if(d.privacyNotice){var pv=E('div','pv');pv.appendChild(E('span','d'));pv.appendChild(E('span',null,d.privacyNotice));c.appendChild(pv);}",
-    "root.appendChild(c);}",
-    "window.addEventListener('message',function(e){var m=e.data;if(m.type==='loading')loading(m.query);else if(m.type==='result')render(m.data);else if(m.type==='error')error(m.message,m.url);});",
+    "root.appendChild(c);if(draft)renderDraft(draft);}",
+    "function renderDraft(dr){var c=E('div','card glass');c.appendChild(E('div','lbl','Draft '+(dr.kind||'reply')+' · '+(dr.voiceNote||'')));if(dr.title)c.appendChild(E('div','dtitle',dr.title));var ta=document.createElement('textarea');ta.className='dbody';ta.value=dr.body;c.appendChild(ta);var row=E('div','dactions');var copy=document.createElement('button');copy.className='dbtn copy';copy.textContent='Copy draft';copy.onclick=function(){navigator.clipboard&&navigator.clipboard.writeText(ta.value);copy.textContent='Copied \\u2713';setTimeout(function(){copy.textContent='Copy draft';},1500);};var note=E('span','pv2','Draft only \\u2014 paste where you want it. Nothing is posted automatically.');row.appendChild(copy);c.appendChild(row);c.appendChild(note);root.appendChild(c);}",
+    "window.addEventListener('message',function(e){var m=e.data;if(m.type==='loading')loading(m.query);else if(m.type==='result')render(m.data,m.draft);else if(m.type==='error')error(m.message,m.url);});",
     // shader
     "(function(){var cv=document.getElementById('bg');var gl=cv.getContext('webgl')||cv.getContext('experimental-webgl');if(!gl){cv.style.background='#070a11';return;}",
     "function S(t,s){var sh=gl.createShader(t);gl.shaderSource(sh,s);gl.compileShader(sh);return sh;}",
