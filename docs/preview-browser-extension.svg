@@ -10,6 +10,15 @@
     <filter id="soft" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="36"/></filter>
     <filter id="glow" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="7"/></filter>
     <filter id="drop" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="18" stdDeviation="20" flood-color="#000" flood-opacity="0.55"/></filter>
+    <linearGradient id="copper" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#8a4f25"/><stop offset="22%" stop-color="#e6a062"/>
+      <stop offset="40%" stop-color="#ffe9c8"/><stop offset="58%" stop-color="#c77b3e"/>
+      <stop offset="80%" stop-color="#e6a062"/><stop offset="100%" stop-color="#8a4f25"/>
+    </linearGradient>
+    <linearGradient id="neon" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#38e8ff"/><stop offset="45%" stop-color="#8b5cff"/>
+      <stop offset="75%" stop-color="#ff4d9d"/><stop offset="100%" stop-color="#b6ff5a"/>
+    </linearGradient>
   </defs>
 
   <rect width="1000" height="660" fill="#05060c"/>
@@ -53,10 +62,10 @@
     <text x="72" y="32" fill="#38e8ff" font-size="10" letter-spacing="2.2" font-weight="700">FLYONWALL · COMMUNITY BRAIN</text>
     <text x="72" y="56" font-size="20" font-weight="800" fill="url(#g)">Help Me Comms</text>
 
-    <!-- ACCENT TAB BAR — copper outline, magenta active pill (Evidence) -->
+    <!-- ACCENT TAB BAR — brushed copper outline, magenta active pill (Evidence) -->
     <g transform="translate(20,76)">
-      <rect x="-1.5" y="-1.5" width="355" height="49" rx="17.5" fill="none" stroke="#c77b3e" stroke-opacity="0.5" stroke-width="3" filter="url(#glow)"/>
-      <rect width="352" height="46" rx="16" fill="url(#gl)" stroke="#e6a062" stroke-opacity="0.85" stroke-width="1.5" filter="url(#drop)"/>
+      <rect x="-2" y="-2" width="356" height="50" rx="18" fill="none" stroke="url(#copper)" stroke-opacity="0.55" stroke-width="4" filter="url(#glow)"/>
+      <rect width="352" height="46" rx="16" fill="url(#gl)" stroke="url(#copper)" stroke-width="2" filter="url(#drop)"/>
       <!-- active pill: Evidence -->
       <rect x="181" y="5" width="86" height="36" rx="11" fill="#ff4d9d" filter="url(#glow)"/>
       <rect x="181" y="5" width="86" height="36" rx="11" fill="#ff4d9d"/>
@@ -68,9 +77,11 @@
       </g>
     </g>
 
-    <!-- EVIDENCE view card -->
+    <!-- EVIDENCE view card — accent bloom + traveling neon ring -->
+    <ellipse cx="196" cy="150" rx="150" ry="60" fill="#ff4d9d" opacity="0.16" filter="url(#soft)"/>
     <g transform="translate(20,138)" filter="url(#drop)">
       <rect width="352" height="392" rx="16" fill="url(#gl)" stroke="#fff" stroke-opacity="0.10"/>
+      <rect x="0.8" y="0.8" width="350.4" height="390.4" rx="15" fill="none" stroke="url(#neon)" stroke-width="1.6" stroke-opacity="0.6"/>
     </g>
     <g transform="translate(20,138)">
       <!-- confidence -->
@@ -78,6 +89,8 @@
       <rect x="16" y="44" width="282" height="9" rx="4.5" fill="#fff" fill-opacity="0.08"/>
       <rect x="16" y="44" width="178" height="9" rx="4.5" fill="url(#mtr)" filter="url(#glow)"/>
       <rect x="16" y="44" width="178" height="9" rx="4.5" fill="url(#mtr)"/>
+      <circle cx="194" cy="48.5" r="7" fill="#b6ff5a" opacity="0.9" filter="url(#glow)"/>
+      <circle cx="194" cy="48.5" r="4.5" fill="#f2fff6"/>
       <text x="336" y="53" text-anchor="end" fill="#eaf2ff" font-size="13" font-weight="800">63%</text>
 
       <!-- sources -->

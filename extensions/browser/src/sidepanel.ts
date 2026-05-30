@@ -101,7 +101,7 @@ function confidenceMeter(value: number) {
 function fill(viewId: string, build: (card: HTMLElement) => void) {
   const view = document.getElementById(viewId) as HTMLElement;
   view.innerHTML = "";
-  const card = el("div", "card glass");
+  const card = el("div", "card glass lux");
   build(card);
   view.append(card);
 }
@@ -179,7 +179,7 @@ function render(data: HelpAnswer) {
 function showError(viewId: string) {
   const view = document.getElementById(viewId) as HTMLElement;
   view.innerHTML = "";
-  const card = el("div", "card glass");
+  const card = el("div", "card glass lux");
   const line = el("div", "errline");
   line.append(document.createTextNode("Couldn't reach the local Help Me app at "));
   line.append(el("b", undefined, "localhost:3000"));
@@ -191,7 +191,7 @@ function showError(viewId: string) {
 function showLoading(viewId: string) {
   const view = document.getElementById(viewId) as HTMLElement;
   view.innerHTML = "";
-  const card = el("div", "card glass");
+  const card = el("div", "card glass lux");
   card.append(el("div", "skel w40"), el("div", "skel w90"), el("div", "skel w70"));
   view.append(card);
 }

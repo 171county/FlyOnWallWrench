@@ -330,3 +330,78 @@ body.panel .shell { min-height: 100vh; }
     0 0 20px -4px color-mix(in srgb, var(--copper) 70%, transparent),
     0 16px 46px -16px var(--tab-accent, transparent);
 }
+
+/* ============================================================
+   v3 — POP: living edge light, metallic sheen, hot meter, blooms
+   ============================================================ */
+@property --a { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+@keyframes spin     { to { --a: 360deg; } }
+@keyframes shimmer2 { 0% { transform: translateX(-100%); } 60%, 100% { transform: translateX(240%); } }
+@keyframes pulse    { 0%, 100% { opacity: .6; } 50% { opacity: 1; } }
+
+/* brighter, more luminous glass */
+.glass, .action { background: linear-gradient(180deg, rgba(255,255,255,.095), rgba(255,255,255,.028)); }
+body::after {
+  background:
+    radial-gradient(120% 80% at 50% -10%, rgba(56,232,255,.16), transparent 60%),
+    linear-gradient(180deg, rgba(5,6,12,.16), rgba(5,6,12,.60));
+}
+
+/* traveling neon ring around result cards */
+.card.lux { position: relative; isolation: isolate; }
+.card.lux::before {
+  content: ""; position: absolute; inset: -1px; border-radius: inherit; padding: 1.4px;
+  background: conic-gradient(from var(--a),
+    rgba(56,232,255,0) 0deg, #38e8ff 40deg, #8b5cff 110deg, rgba(139,92,255,0) 165deg,
+    rgba(255,77,157,0) 200deg, #ff4d9d 250deg, #b6ff5a 320deg, rgba(182,255,90,0) 360deg);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor; mask-composite: exclude;
+  animation: spin 7s linear infinite; opacity: .55; pointer-events: none;
+}
+
+/* brushed-copper sheen sweeping the tab frame */
+.tabs::before {
+  content: ""; position: absolute; inset: -1px; border-radius: inherit; padding: 1.4px;
+  background: conic-gradient(from var(--a),
+    rgba(199,123,62,0) 0deg, var(--copper-lit) 46deg, #ffe9c8 78deg, var(--copper) 120deg, rgba(199,123,62,0) 175deg,
+    rgba(199,123,62,0) 300deg, var(--copper-lit) 348deg, rgba(199,123,62,0) 360deg);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor; mask-composite: exclude;
+  animation: spin 9s linear infinite; opacity: .85; pointer-events: none;
+}
+
+/* accent bloom behind the active view, recolors to the live tab */
+.views { isolation: isolate; }
+.views::before {
+  content: ""; position: absolute; left: 50%; top: -16px; width: 72%; height: 130px; z-index: -1;
+  transform: translateX(-50%); border-radius: 50%; filter: blur(42px); opacity: .55; pointer-events: none;
+  background: radial-gradient(closest-side, var(--tab-accent, #38e8ff), transparent);
+  transition: background .45s ease;
+}
+
+/* hot confidence meter — glowing head + traveling shimmer */
+.meter { isolation: isolate; }
+.meter > i { box-shadow: 0 0 18px rgba(182,255,90,.75); overflow: visible; }
+.meter > i::after {
+  content: ""; position: absolute; right: -2px; top: 50%; width: 11px; height: 11px;
+  transform: translateY(-50%); border-radius: 50%; background: #f2fff6;
+  box-shadow: 0 0 10px #b6ff5a, 0 0 20px #b6ff5a;
+}
+.meter > i::before {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; overflow: hidden;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.75), transparent);
+  transform: translateX(-100%); animation: shimmer2 2.6s ease-in-out infinite;
+}
+
+/* pulsing identity LEDs (skip the active tab's hidden dot) */
+.pill .led, .ev .evdot, .tab:not([aria-selected="true"]) .led { animation: pulse 2.6s ease-in-out infinite; }
+
+/* hover energy */
+.ev { transition: transform .18s, border-color .2s, box-shadow .25s; }
+.ev:hover { transform: translateY(-2px); border-color: rgba(255,255,255,.18); box-shadow: 0 12px 28px rgba(0,0,0,.45); }
+.pill { transition: transform .15s, box-shadow .2s; }
+.pill:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(0,0,0,.4); }
+
+/* punchier title + accent section labels */
+.title { filter: drop-shadow(0 2px 18px rgba(139,92,255,.65)) drop-shadow(0 0 30px rgba(56,232,255,.28)); }
+.section-label { color: color-mix(in srgb, var(--tab-accent, #9aa6c4) 55%, #9aa6c4); }
