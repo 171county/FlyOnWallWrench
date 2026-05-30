@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SourceCapabilities",
+  "type": "object",
+  "required": ["source", "read", "write", "supportsThreads", "supportsSearch"],
+  "properties": {
+    "source": { "type": "string" },
+    "read": { "type": "boolean" },
+    "write": {
+      "type": "string",
+      "enum": ["disabled", "draft_only", "approval_required", "enabled"]
+    },
+    "supportsThreads": { "type": "boolean" },
+    "supportsSearch": { "type": "boolean" },
+    "supportsRealtime": { "type": "boolean" },
+    "supportsPrivateSpaces": { "type": "boolean" },
+    "supportsUserOwnedRetention": { "type": "boolean" },
+    "approvedSpaces": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  },
+  "additionalProperties": false
+}

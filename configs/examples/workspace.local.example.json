@@ -1,0 +1,11 @@
+{
+  "workspace_id": "demo_workspace",
+  "projects": [
+    "Example Game",
+    "Example Mod Toolkit"
+  ],
+  "retention": "ephemeral",
+  "public_posting": "approval_required",
+  "private_dms": "disabled",
+  "moderation": "disabled"
+}

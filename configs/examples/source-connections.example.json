@@ -1,0 +1,31 @@
+{
+  "sources": [
+    {
+      "source": "discord",
+      "status": "connected",
+      "read": true,
+      "write": "approval_required",
+      "approved_spaces": [
+        "support",
+        "bug-reports",
+        "feedback",
+        "announcements"
+      ]
+    },
+    {
+      "source": "steam_reviews",
+      "status": "connected",
+      "read": true,
+      "write": "disabled"
+    },
+    {
+      "source": "reddit",
+      "status": "connected",
+      "read": true,
+      "write": "approval_required",
+      "approved_spaces": [
+        "configured_communities_only"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "provider_mode": "bring_your_own",
+  "default_model": "user_selected",
+  "store_provider_keys_in_mcp": false,
+  "evidence_budget": {
+    "max_items": 10,
+    "max_chars_per_item": 1200
+  }
+}

@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Help Me Comms MCP Tool Schemas",
+  "tools": {
+    "get_workspace_context": {
+      "description": "Return connected sources, source capabilities, projects, provider mode, write policy, and privacy settings for the workspace.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "workspace_id": {
+            "type": "string",
+            "description": "Optional workspace id. If absent, infer from session."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "community_help": {
+      "description": "Flagship conversational tool. Scope the request, retrieve relevant evidence, and return an answer, follow-up, draft, or action plan.",
+      "input_schema": {
+        "type": "object",
+        "required": ["user_message"],
+        "properties": {
+          "workspace_id": { "type": "string" },
+          "conversation_id": { "type": "string" },
+          "user_message": { "type": "string" },
+          "project_hint": { "type": "string" },
+          "mode": {
+            "type": "string",
+            "enum": ["answer_user", "community_manager", "developer_triage", "draft_action", "idea_pull", "idea_push"]
+          },
+          "source_policy": {
+            "type": "string",
+            "enum": ["auto_scope_connected_sources", "use_connected_sources_only", "target_thread_only", "ask_before_extra_sources"]
+          },
+          "time_window": { "type": "string", "description": "Examples: 24h, 7d, 14d, 30d" },
+          "return_mode": { "type": "string", "enum": ["answer", "evidence_pack", "action_plan", "full"] }
+        },
+        "additionalProperties": false
+      }
+    },
+    "get_comms_thread": {
+      "description": "Fetch one exact thread or conversation from a connected source.",
+      "input_schema": {
+        "type": "object",
+        "required": ["source_ref"],
+        "properties": {
+          "workspace_id": { "type": "string" },
+          "source_ref": { "type": "string" },
+          "include_context": { "type": "boolean", "default": true },
+          "redaction_level": { "type": "string", "enum": ["standard", "strict", "none"], "default": "standard" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "draft_comms_action": {
+      "description": "Draft a reply, announcement, poll, FAQ, known-issue post, idea card, or triage card from evidence.",
+      "input_schema": {
+        "type": "object",
+        "required": ["objective"],
+        "properties": {
+          "workspace_id": { "type": "string" },
+          "objective": { "type": "string" },
+          "target_ref": { "type": "string" },
+          "tone": { "type": "string" },
+          "evidence_refs": { "type": "array", "items": { "type": "string" } },
+          "action_type": {
+            "type": "string",
+            "enum": ["reply", "announcement", "poll", "faq", "known_issue", "idea_card", "triage_card", "internal_digest"]
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "queue_comms_action": {
+      "description": "Queue a draft/action plan for visible user approval. Public writes must use this path by default.",
+      "input_schema": {
+        "type": "object",
+        "required": ["action_type", "draft"],
+        "properties": {
+          "workspace_id": { "type": "string" },
+          "action_type": { "type": "string" },
+          "target_ref": { "type": "string" },
+          "draft": { "type": "string" },
+          "approval_policy": { "type": "string", "enum": ["required", "optional", "disabled"], "default": "required" },
+          "expires_in": { "type": "string", "description": "Example: 24h" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "suggest_more_sources": {
+      "description": "Recommend optional sources after an answer when confidence or coverage could improve.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "workspace_id": { "type": "string" },
+          "last_intent": { "type": "string" },
+          "sources_used": { "type": "array", "items": { "type": "string" } },
+          "user_goal": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    }
+  }
+}

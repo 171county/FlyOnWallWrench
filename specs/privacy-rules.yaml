@@ -1,0 +1,36 @@
+retention_default: ephemeral
+mcp_may_store:
+  - workspace_id
+  - source_names
+  - source_capability_flags
+  - non_sensitive_preferences
+  - approval_status_metadata
+  - redacted_audit_metadata
+mcp_must_not_store:
+  - api_keys
+  - oauth_tokens
+  - provider_keys
+  - private_message_bodies
+  - dms
+  - crash_dumps
+  - full_logs
+  - source_files
+  - browser_page_snapshots
+  - ide_workspace_contents
+  - private_support_tickets
+  - unredacted_action_bodies_after_task_completion
+action_defaults:
+  public_posting: approval_required
+  moderation: disabled
+  dms: disabled
+  local_file_edits: approval_required
+  terminal_commands: approval_required
+browser_extension:
+  default_access: active_tab_or_user_selected_text
+  background_scraping: disabled
+  auto_submit: disabled
+vscode_extension:
+  default_access: selected_text_or_current_file_with_permission
+  send_entire_workspace: disabled
+  apply_diffs: approval_required
+  run_commands: approval_required

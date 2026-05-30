@@ -1,0 +1,36 @@
+openapi: 3.1.0
+info:
+  title: Help Me Comms App API
+  version: 0.1.0
+  description: App-facing API for web/browser/VS Code clients. Sensitive evidence is ephemeral by default.
+paths:
+  /api/workspace/context:
+    post:
+      summary: Get workspace context
+      responses:
+        '200':
+          description: Workspace context
+  /api/community/help:
+    post:
+      summary: Run conversational community help
+      responses:
+        '200':
+          description: Help answer or action plan
+  /api/actions/queue:
+    post:
+      summary: Queue an approval-safe action
+      responses:
+        '200':
+          description: Queued action metadata
+  /api/actions/{actionId}:
+    get:
+      summary: Get action status
+      parameters:
+        - in: path
+          name: actionId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Action status

@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.next/
+out/
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+.vscode-test/
+coverage/
+.cache/
+.local/
+secrets/
