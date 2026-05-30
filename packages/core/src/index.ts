@@ -7,4 +7,5 @@ export * from "./privacyRedactor.js";
 export * from "./actions.js";
 export * from "./providers.js";
 export * from "./communityHelp.js";
+export * from "./drafts.js";
 export * from "./mockWorkspace.js";

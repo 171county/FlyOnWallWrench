@@ -2,10 +2,10 @@ import {
   aggregateConfidence,
   classifyIntent,
   communityHelp,
-  createActionPlan,
+  composeDraft,
   mockWorkspaceContext,
-  queueAction,
   rankEvidence,
+  type DraftKind,
   type EvidenceItem,
   type HelpAnswer,
   type SourceCapabilities,
@@ -16,6 +16,7 @@ import { initShaderBackground } from "./shaderBg";
 import { initParallax } from "./spatial";
 import { liveFor, recentFor, type FeedMsg } from "./feed";
 import { addSignal, localConfirmations } from "./signals";
+import { enqueue, list as queueList, onChange as onQueueChange, pendingCount, setStatus, updateBody, type QueueItem } from "./queue";
 
 initShaderBackground("bg");
 initParallax();
@@ -185,17 +186,23 @@ function buildAskView(): HTMLElement {
     if (!sel.length) return;
     out.innerHTML = "";
     const card = el("div", "card glass lux");
-    card.append(el("div", "section-label", `Queued to ${sel.length} target${sel.length === 1 ? "" : "s"} — nothing posts until you approve`));
-    const list = el("div", "queued");
+    card.append(el("div", "section-label", `Queued ${sel.length} draft${sel.length === 1 ? "" : "s"} — review & approve in the Queue tab`));
+    const listEl = el("div", "queued");
+    const intent = classifyIntent(message);
     for (const kind of sel) {
-      const plan = queueAction(createActionPlan({ actionType: "poll", draft: message, targetRef: kind, allowedClient: "web_app" }));
+      // authentic per-platform poll draft, sent to the real approval queue
+      const draft = composeDraft({ kind: "poll", source: kind, topic: message, intent });
+      enqueue({ actionType: draft.actionType, source: kind, title: draft.title, body: draft.body });
       const row = el("div", "qrow");
       const led = el("span", "qled"); led.style.color = meta(kind).color;
-      row.append(led, el("span", undefined, `Poll → ${meta(kind).label}`), el("span", "qstate", plan.approvalRequired ? "Approval" : plan.status));
-      list.append(row);
+      row.append(led, el("span", undefined, `Poll → ${meta(kind).label}`), el("span", "qstate", "Approval"));
+      listEl.append(row);
     }
-    card.append(list);
-    const pv = el("div", "privacy"); pv.append(el("span", "dot"), el("span", undefined, "Drafts are queued locally. Approve each in the client to post.")); card.append(pv);
+    card.append(listEl);
+    const cta = el("button", "btn2 go") as HTMLButtonElement;
+    cta.textContent = `Review in Queue (${pendingCount()})`;
+    cta.addEventListener("click", () => setActive("queue"));
+    card.append(cta);
     out.append(card);
   });
 
@@ -227,7 +234,17 @@ function renderMsg(m: FeedMsg, kind: string, live = false, showSource = false): 
     addSignal(m.body, kind); // real correlation: feeds Ask's prevalence read
   });
   const replyBtn = el("button", "rbtn", "Draft reply") as HTMLButtonElement;
-  replyBtn.addEventListener("click", () => { if (replyBtn.classList.contains("queued")) return; queueAction(createActionPlan({ actionType: "reply", draft: "(reply draft)", targetRef: kind, allowedClient: "web_app" })); replyBtn.className = "rbtn queued"; replyBtn.textContent = "Queued · approval"; });
+  replyBtn.addEventListener("click", () => {
+    if (replyBtn.classList.contains("queued")) return;
+    // authentic reply in this platform's voice, folding the message as evidence
+    const draft = composeDraft({
+      kind: "reply", source: kind, topic: m.body,
+      intent: classifyIntent(m.body),
+      evidence: [{ id: m.author, source: kind as SourceKind, title: m.author, summary: m.body, matchedTerms: [], confidenceSignals: { semanticMatch: 0.6, exactTermMatch: 0.5, recency: 0.9, sourceTrust: 0.6, confirmationCount: m.up, sameVersionBonus: 0, resolvedBonus: 0, duplicatePenalty: 0, lowQualityPenalty: 0 }, redacted: true }],
+    });
+    enqueue({ actionType: draft.actionType, source: kind, title: draft.title, body: draft.body });
+    replyBtn.className = "rbtn queued"; replyBtn.textContent = "Queued · approval";
+  });
   react.append(upBtn, meBtn, replyBtn);
   mb.append(react);
   row.append(av, mb);
@@ -292,7 +309,72 @@ function buildPulseView(): HTMLElement {
   return view;
 }
 
-/* ---------- nav (Ask + Pulse + connected sources) ---------- */
+/* ---------- Queue: review & approve drafts (closes the loop) ---------- */
+const ACTION_LABEL: Record<string, string> = { reply: "Reply", poll: "Poll", known_issue: "Known Issue", faq: "FAQ", announcement: "Announcement" };
+let queueBody: HTMLElement | null = null;
+
+function renderQueue(container: HTMLElement) {
+  container.innerHTML = "";
+  const items = queueList();
+  if (items.length === 0) {
+    const empty = el("div", "queue-empty");
+    empty.append(el("span", "big", "✎"), document.createTextNode("No drafts yet. Use “Draft reply” on a feed message, or “Queue broadcast” in Ask — they land here for your approval."));
+    container.append(empty);
+    return;
+  }
+  for (const item of items) renderDraftCard(container, item);
+}
+
+function renderDraftCard(container: HTMLElement, item: QueueItem) {
+  const card = el("div", "draft card glass lux");
+  const dh = el("div", "dh");
+  const kind = el("span", "dkind", ACTION_LABEL[item.actionType] ?? item.actionType);
+  kind.style.background = meta(item.source).color;
+  const src = el("span", "dsrc");
+  const led = el("span", "led"); led.style.color = meta(item.source).color;
+  src.append(led, document.createTextNode(meta(item.source).label));
+  const state = el("span", `dstate ${item.status}`, item.status);
+  dh.append(kind, src, state);
+  card.append(dh);
+
+  if (item.title) card.append(el("div", "dtitle", item.title));
+
+  const body = el("textarea", "dbody") as HTMLTextAreaElement;
+  body.value = item.body;
+  body.disabled = item.status !== "queued";
+  body.addEventListener("input", () => updateBody(item.id, body.value));
+  card.append(body);
+
+  if (item.status === "queued") {
+    const actions = el("div", "dactions");
+    const approve = el("button", "dbtn approve", "✓ Approve") as HTMLButtonElement;
+    approve.addEventListener("click", () => setStatus(item.id, "approved"));
+    const reject = el("button", "dbtn reject", "Reject") as HTMLButtonElement;
+    reject.addEventListener("click", () => setStatus(item.id, "rejected"));
+    const copy = el("button", "dbtn copy", "Copy") as HTMLButtonElement;
+    copy.addEventListener("click", async () => { await navigator.clipboard?.writeText(body.value).catch(() => {}); copy.textContent = "Copied ✓"; window.setTimeout(() => (copy.textContent = "Copy"), 1500); });
+    actions.append(approve, reject, copy);
+    card.append(actions);
+  } else if (item.status === "approved") {
+    const pv = el("div", "privacy");
+    pv.append(el("span", "dot"), el("span", undefined, "Approved — paste into the client to post. Help Me never posts on its own."));
+    card.append(pv);
+  }
+  container.append(card);
+}
+
+function buildQueueView(): HTMLElement {
+  const view = el("div", "view");
+  view.id = "view-queue";
+  view.append(el("div", "section-label", "Approval queue · nothing posts until you approve"));
+  const body = el("div", "result");
+  queueBody = body;
+  renderQueue(body);
+  view.append(body);
+  return view;
+}
+
+/* ---------- nav (Ask + Pulse + connected sources + Queue) ---------- */
 const nav = document.getElementById("nav") as HTMLElement;
 const indicator = document.getElementById("ind") as HTMLElement;
 const views = document.getElementById("views") as HTMLElement;
@@ -302,9 +384,10 @@ const navItems: NavItem[] = [
   { id: "ask", label: "Ask", accent: "#4cc2ff" },
   { id: "pulse", label: "Pulse", accent: "#2ee06a" },
   ...connected.map((s) => ({ id: s.source, label: meta(s.source).label, accent: meta(s.source).color })),
+  { id: "queue", label: "Queue", accent: "#e0964a" },
 ];
 
-views.append(buildAskView(), buildPulseView(), ...connected.map((s) => buildSourceView(s)));
+views.append(buildAskView(), buildPulseView(), ...connected.map((s) => buildSourceView(s)), buildQueueView());
 
 const navButtons: HTMLButtonElement[] = navItems.map((item) => {
   const b = el("button", "tab") as HTMLButtonElement;
@@ -315,6 +398,19 @@ const navButtons: HTMLButtonElement[] = navItems.map((item) => {
   b.addEventListener("click", () => setActive(item.id));
   nav.append(b);
   return b;
+});
+
+// pending-draft badge on the Queue tab; live-updates as drafts come/go
+const queueBtn = navButtons.find((b) => b.dataset.tab === "queue");
+function refreshQueueBadge() {
+  if (!queueBtn) return;
+  queueBtn.querySelector(".badge")?.remove();
+  const n = pendingCount();
+  if (n > 0) queueBtn.append(el("span", "badge", String(n)));
+}
+onQueueChange(() => {
+  refreshQueueBadge();
+  if (activeView === "queue" && queueBody) renderQueue(queueBody);
 });
 
 let activeView: string = "ask";
@@ -328,6 +424,7 @@ function setActive(id: string) {
   btn.scrollIntoView({ inline: "nearest", block: "nearest", behavior: "smooth" });
   views.querySelectorAll<HTMLElement>(".view").forEach((v) => v.classList.toggle("active", v.id === `view-${id}`));
   activeView = id;
+  if (id === "queue" && queueBody) renderQueue(queueBody); // refresh on open
 }
 
 // live trickle — only the visible feed grows (a source feed, or Pulse merged)

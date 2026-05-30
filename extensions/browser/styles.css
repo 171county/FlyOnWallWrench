@@ -519,3 +519,30 @@ body::after {
 .corr { display: flex; align-items: center; gap: 8px; padding: 9px 12px; border-radius: 12px; background: color-mix(in srgb, var(--lime) 8%, transparent); border: 1px solid color-mix(in srgb, var(--lime) 28%, transparent); font-size: 12.5px; color: #d7ffe6; }
 .corr b { color: var(--lime); }
 .pulsehead { display: flex; align-items: center; justify-content: space-between; }
+
+/* ============================================================
+   v8 — approval queue + draft cards
+   ============================================================ */
+.tab .badge { font-size: 9px; font-weight: 800; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px; display: inline-grid; place-items: center; background: var(--amber); color: #1a0f06; box-shadow: 0 0 10px rgba(232,178,90,.5); }
+.draft { padding: 13px; display: flex; flex-direction: column; gap: 10px; }
+.draft .dh { display: flex; align-items: center; gap: 9px; }
+.draft .dkind { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; font-weight: 800; padding: 3px 9px; border-radius: 999px; color: #06121a; }
+.draft .dsrc { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); }
+.draft .dsrc .led { width: 8px; height: 8px; border-radius: 50%; box-shadow: 0 0 8px currentColor; }
+.draft .dstate { margin-left: auto; font-size: 9.5px; letter-spacing: 1px; text-transform: uppercase; padding: 3px 8px; border-radius: 999px; }
+.draft .dstate.queued { color: var(--amber); border: 1px solid rgba(232,178,90,.4); }
+.draft .dstate.approved { color: #06150d; background: var(--lime); }
+.draft .dstate.rejected { color: #fff; background: rgba(255,90,90,.25); border: 1px solid rgba(255,90,90,.4); }
+.draft .dtitle { font-size: 13.5px; font-weight: 700; color: #eaf2ff; }
+.draft textarea.dbody { width: 100%; min-height: 92px; resize: vertical; background: rgba(3,6,14,.5); color: #dce6ff; border: 1px solid rgba(255,255,255,.09); border-radius: 11px; padding: 11px; font: inherit; font-size: 12.5px; line-height: 1.5; outline: none; }
+.draft textarea.dbody:focus { border-color: rgba(76,194,255,.5); box-shadow: 0 0 0 3px rgba(76,194,255,.12); }
+.draft .voicenote { font-size: 10.5px; color: var(--faint); font-style: italic; }
+.draft .dactions { display: flex; gap: 8px; flex-wrap: wrap; }
+.dbtn { border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.05); color: var(--ink); border-radius: 11px; padding: 8px 14px; font: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer; transition: border-color .2s, box-shadow .2s, transform .15s, background .2s; }
+.dbtn:hover { transform: translateY(-1px); }
+.dbtn.approve { border-color: transparent; background: var(--lime); color: #06150d; }
+.dbtn.approve:hover { box-shadow: 0 8px 22px -6px rgba(46,224,106,.6); }
+.dbtn.reject:hover { border-color: rgba(255,90,90,.5); color: #ff8a8a; }
+.dbtn.copy:hover { border-color: rgba(76,194,255,.5); color: var(--steel); }
+.queue-empty { padding: 30px 18px; text-align: center; color: var(--faint); font-size: 12.5px; line-height: 1.55; border: 1px dashed rgba(255,255,255,.10); border-radius: 16px; }
+.queue-empty .big { display: block; font-size: 28px; margin-bottom: 8px; color: var(--amber); filter: drop-shadow(0 0 12px var(--amber)); }
