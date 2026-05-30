@@ -90,7 +90,7 @@ var candidateByIntent = {
 function scopeSources(intent, context) {
   const plan = candidateByIntent[intent];
   const connected2 = new Set(context.connectedSources.filter((s) => s.read).map((s) => s.source));
-  const onlyConnected = (sources) => sources.filter((source) => connected2.has(source));
+  const onlyConnected = (sources2) => sources2.filter((source) => connected2.has(source));
   return {
     required: onlyConnected(plan.required),
     optional: onlyConnected(plan.optional),
@@ -548,6 +548,120 @@ var GithubDiscussionsAdapter = class extends BaseMockAdapter {
   }
 };
 
+// ../../packages/adapters/dist/customSourceAdapter.js
+var CustomSourceAdapter = class {
+  kind = "forum";
+  // normalized bucket; cfg.id keeps identity
+  capabilities;
+  cfg;
+  constructor(cfg) {
+    this.cfg = cfg;
+    this.capabilities = {
+      source: "forum",
+      read: true,
+      write: "disabled",
+      supportsThreads: true,
+      supportsSearch: this.cfg.type === "discourse",
+      supportsRealtime: false,
+      supportsPrivateSpaces: false,
+      supportsUserOwnedRetention: false,
+      approvedSpaces: [cfg.url]
+    };
+  }
+  async fetchDiscourse(query, limit) {
+    const base = this.cfg.url.replace(/\/+$/, "");
+    const url = query ? `${base}/search.json?q=${encodeURIComponent(query)}` : `${base}/latest.json`;
+    const res = await fetch(url, { headers: { accept: "application/json", "user-agent": "HelpMeComms/0.1" } });
+    if (!res.ok)
+      throw new Error(`Discourse read failed (${res.status}) for ${this.cfg.label}`);
+    const data = await res.json();
+    const topics = data.topics ?? data.topic_list?.topics ?? [];
+    return topics.slice(0, limit).map((t) => ({
+      title: t.title,
+      body: t.title,
+      url: t.slug && t.id ? `${base}/t/${t.slug}/${t.id}` : base,
+      createdAt: t.created_at
+    }));
+  }
+  async fetchRss(limit) {
+    const res = await fetch(this.cfg.url, { headers: { "user-agent": "HelpMeComms/0.1" } });
+    if (!res.ok)
+      throw new Error(`Feed read failed (${res.status}) for ${this.cfg.label}`);
+    const xml = await res.text();
+    const items2 = [];
+    const blocks = xml.split(/<(?:item|entry)[ >]/i).slice(1);
+    for (const b of blocks.slice(0, limit)) {
+      const title = (/<title[^>]*>([\s\S]*?)<\/title>/i.exec(b)?.[1] ?? "").replace(/<!\[CDATA\[|\]\]>/g, "").trim();
+      const link = /<link[^>]*href="([^"]+)"/i.exec(b)?.[1] ?? /<link[^>]*>([\s\S]*?)<\/link>/i.exec(b)?.[1] ?? "";
+      const date = /<(?:pubDate|updated|published)[^>]*>([\s\S]*?)<\/(?:pubDate|updated|published)>/i.exec(b)?.[1] ?? "";
+      if (title)
+        items2.push({ title, body: title, url: link.trim(), createdAt: date.trim() || void 0 });
+    }
+    return items2;
+  }
+  async fetchItems(query, limit) {
+    return this.cfg.type === "discourse" ? this.fetchDiscourse(query, limit) : this.fetchRss(limit);
+  }
+  async search(request, _context) {
+    const terms = request.query.toLowerCase().split(/\s+/).filter((w) => w.length > 3);
+    let items2 = [];
+    try {
+      items2 = await this.fetchItems(request.query, Math.max(20, request.maxEvidence ?? 10));
+    } catch {
+      return [];
+    }
+    const out = [];
+    for (const it of items2) {
+      const lower = `${it.title} ${it.body}`.toLowerCase();
+      const matched = terms.filter((t) => lower.includes(t));
+      if (terms.length && matched.length === 0 && this.cfg.type === "rss")
+        continue;
+      const ageDays = it.createdAt ? (Date.now() - Date.parse(it.createdAt)) / 864e5 : 7;
+      out.push({
+        id: `${this.cfg.id}_${out.length}`,
+        source: "forum",
+        title: it.title.slice(0, 120),
+        summary: it.body.slice(0, 280),
+        sourceUrl: it.url,
+        createdAt: it.createdAt,
+        matchedTerms: matched,
+        confidenceSignals: {
+          semanticMatch: terms.length ? Math.min(1, matched.length / terms.length) : 0.5,
+          exactTermMatch: matched.length ? 0.65 : 0.4,
+          recency: Number.isFinite(ageDays) ? Math.max(0, 1 - ageDays / 30) : 0.5,
+          sourceTrust: 0.6,
+          confirmationCount: 0,
+          sameVersionBonus: 0,
+          resolvedBonus: 0,
+          duplicatePenalty: 0,
+          lowQualityPenalty: it.title.length < 12 ? 0.2 : 0
+        },
+        redacted: true
+      });
+    }
+    return out.slice(0, request.maxEvidence ?? 10);
+  }
+  async getThread(ref, _context) {
+    const items2 = await this.fetchItems("", 25).catch(() => []);
+    return {
+      ref,
+      title: this.cfg.label,
+      redacted: true,
+      items: items2.map((it, i) => ({
+        id: `${this.cfg.id}_${i}`,
+        source: "forum",
+        authorRef: "redacted_author",
+        authorRole: "unknown",
+        body: it.title,
+        createdAt: it.createdAt ?? (/* @__PURE__ */ new Date()).toISOString(),
+        url: it.url,
+        visibility: "public",
+        permissions: { canQuote: true, canReply: false, canSummarize: true }
+      }))
+    };
+  }
+};
+
 // ../../packages/adapters/dist/index.js
 function createDefaultMockAdapters() {
   return [
@@ -901,7 +1015,39 @@ function setLastTab(lastTab) {
   save(KEY2, prefs);
 }
 
+// src/customSources.ts
+var KEY3 = "helpme.custom.v1";
+var sources = [];
+var listeners3 = /* @__PURE__ */ new Set();
+async function hydrateCustom() {
+  sources = await load(KEY3, []);
+}
+function listCustom() {
+  return sources;
+}
+function addCustom(input) {
+  const id = `custom_${input.label.toLowerCase().replace(/[^a-z0-9]+/g, "_")}_${Date.now().toString(36)}`;
+  const src = { ...input, id };
+  sources = [...sources, src];
+  save(KEY3, sources);
+  emit2();
+  return src;
+}
+function removeCustom(id) {
+  sources = sources.filter((s) => s.id !== id);
+  save(KEY3, sources);
+  emit2();
+}
+function onCustomChange(fn) {
+  listeners3.add(fn);
+}
+function emit2() {
+  listeners3.forEach((fn) => fn());
+}
+
 // src/sidepanel.ts
+var queueBody = null;
+var activeView = "ask";
 initShaderBackground("bg");
 initParallax();
 var SOURCE_META = {
@@ -942,9 +1088,9 @@ function meterEl(value) {
   wrap.append(row);
   return wrap;
 }
-function pillsEl(sources) {
+function pillsEl(sources2) {
   const pills = el("div", "pills");
-  for (const s of sources) {
+  for (const s of sources2) {
     const pill = el("span", "pill");
     const led = el("span", "led");
     led.style.color = meta(s).color;
@@ -1196,7 +1342,6 @@ function buildPulseView() {
   return view;
 }
 var ACTION_LABEL = { reply: "Reply", poll: "Poll", known_issue: "Known Issue", faq: "FAQ", announcement: "Announcement" };
-var queueBody = null;
 function renderQueue(container) {
   container.innerHTML = "";
   const items2 = list();
@@ -1276,25 +1421,147 @@ function buildQueueView() {
 var nav = document.getElementById("nav");
 var indicator = document.getElementById("ind");
 var views = document.getElementById("views");
-var navItems = [
-  { id: "ask", label: "Ask", accent: "#4cc2ff" },
-  { id: "pulse", label: "Pulse", accent: "#2ee06a" },
-  ...connected.map((s) => ({ id: s.source, label: meta(s.source).label, accent: meta(s.source).color })),
-  { id: "queue", label: "Queue", accent: "#e0964a" }
-];
-views.append(buildAskView(), buildPulseView(), ...connected.map((s) => buildSourceView(s)), buildQueueView());
-var navButtons = navItems.map((item) => {
-  const b = el("button", "tab");
-  b.dataset.tab = item.id;
-  b.dataset.accent = item.accent;
-  b.style.setProperty("--a", item.accent);
-  b.append(el("span", "led"), document.createTextNode(item.label));
-  b.addEventListener("click", () => setActive(item.id));
-  nav.append(b);
-  return b;
-});
-var queueBtn = navButtons.find((b) => b.dataset.tab === "queue");
+var CUSTOM_COLORS = ["#4cc2ff", "#7d88c8", "#e0964a", "#2ee06a", "#66c0f4", "#c9d1d9"];
+function buildCustomFeedView(cs) {
+  const view = el("div", "view");
+  view.id = `view-${cs.id}`;
+  const head = el("div", "card glass");
+  const hr = el("div", "srchead");
+  const dot = el("span", "sdot");
+  dot.style.color = cs.color;
+  hr.append(dot, el("span", "sname", cs.label), el("span", "sreach", cs.type));
+  head.append(hr, el("div", "addhint", cs.url));
+  const feed = el("div", "feed");
+  feed.append(el("div", "addhint", "Loading\u2026"));
+  view.append(head, feed);
+  const adapter = new CustomSourceAdapter({ id: cs.id, label: cs.label, type: cs.type, url: cs.url });
+  adapter.getThread({ source: "forum", externalId: cs.id }, workspace).then((thread) => {
+    feed.innerHTML = "";
+    if (!thread.items.length) {
+      feed.append(el("div", "addhint", "No items yet (or the source blocked the request from the browser)."));
+      return;
+    }
+    for (const it of thread.items.slice(0, 12)) {
+      feed.append(renderMsg({ author: cs.label, role: "player", body: it.body, ago: "", sentiment: "neu", up: 0 }, "forum", false));
+    }
+  }).catch(() => {
+    feed.innerHTML = "";
+    feed.append(el("div", "addhint", "Couldn't reach that source from the browser."));
+  });
+  return view;
+}
+function buildAddView() {
+  const view = el("div", "view");
+  view.id = "view-add";
+  const form = el("div", "addform card glass");
+  form.append(el("div", "section-label", "Add a custom source"));
+  const nameWrap = el("div");
+  nameWrap.append(el("label", void 0, "Name"));
+  const name = el("input");
+  name.placeholder = "My Game Forum";
+  nameWrap.append(name);
+  const row = el("div", "row2");
+  const typeWrap = el("div");
+  typeWrap.append(el("label", void 0, "Type"));
+  const type = el("select");
+  for (const [v, t] of [["discourse", "Discourse forum"], ["rss", "RSS / Atom feed"]]) {
+    const o = el("option");
+    o.value = v;
+    o.textContent = t;
+    type.append(o);
+  }
+  typeWrap.append(type);
+  const colorWrap = el("div");
+  colorWrap.append(el("label", void 0, "Accent"));
+  const color = el("select");
+  for (const c of CUSTOM_COLORS) {
+    const o = el("option");
+    o.value = c;
+    o.textContent = c;
+    color.append(o);
+  }
+  colorWrap.append(color);
+  row.append(typeWrap, colorWrap);
+  const urlWrap = el("div");
+  urlWrap.append(el("label", void 0, "URL"));
+  const url = el("input");
+  url.placeholder = "https://forum.mygame.com  or  https://site.com/feed.xml";
+  urlWrap.append(url);
+  const add = el("button", "primary");
+  add.textContent = "Add source \u2726";
+  add.addEventListener("click", () => {
+    const label = name.value.trim();
+    const u = url.value.trim();
+    if (!label || !u) {
+      (label ? url : name).focus();
+      return;
+    }
+    addCustom({ label, type: type.value, url: u, color: color.value });
+    name.value = "";
+    url.value = "";
+  });
+  form.append(nameWrap, row, urlWrap, add);
+  form.append(el("div", "addhint", "Discourse forums expose a public JSON API. RSS/Atom works for devlogs, patch-note feeds, and many forums. Read-only \u2014 nothing is ever posted. Some sites may block browser requests (CORS); those still work via the team app / MCP."));
+  view.append(form);
+  const mine = el("div", "result");
+  const renderMine = () => {
+    mine.innerHTML = "";
+    const all = listCustom();
+    if (!all.length) return;
+    mine.append(el("div", "section-label", "Your sources"));
+    for (const cs of all) {
+      const r = el("div", "mysrc");
+      const led = el("span", "led");
+      led.style.color = cs.color;
+      const meta2 = el("div");
+      meta2.append(el("div", "mn", cs.label), el("div", "mu", `${cs.type} \xB7 ${cs.url}`));
+      const rm = el("button", "dbtn rm", "Remove");
+      rm.addEventListener("click", () => removeCustom(cs.id));
+      r.append(led, meta2, rm);
+      mine.append(r);
+    }
+  };
+  renderMine();
+  onCustomChange(renderMine);
+  view.append(mine);
+  return view;
+}
+var navItems = [];
+var navButtons = [];
+function rebuildNav() {
+  const custom = listCustom();
+  navItems = [
+    { id: "ask", label: "Ask", accent: "#4cc2ff" },
+    { id: "pulse", label: "Pulse", accent: "#2ee06a" },
+    ...connected.map((s) => ({ id: s.source, label: meta(s.source).label, accent: meta(s.source).color })),
+    ...custom.map((c) => ({ id: c.id, label: c.label, accent: c.color })),
+    { id: "queue", label: "Queue", accent: "#e0964a" },
+    { id: "add", label: "+ Add", accent: "#7d88c8" }
+  ];
+  views.innerHTML = "";
+  views.append(
+    buildAskView(),
+    buildPulseView(),
+    ...connected.map((s) => buildSourceView(s)),
+    ...custom.map((c) => buildCustomFeedView(c)),
+    buildQueueView(),
+    buildAddView()
+  );
+  nav.querySelectorAll(".tab").forEach((b) => b.remove());
+  navButtons = navItems.map((item) => {
+    const b = el("button", "tab");
+    b.dataset.tab = item.id;
+    b.dataset.accent = item.accent;
+    b.style.setProperty("--a", item.accent);
+    b.append(el("span", "led"), document.createTextNode(item.label));
+    b.addEventListener("click", () => setActive(item.id));
+    nav.append(b);
+    return b;
+  });
+  refreshQueueBadge();
+}
 function refreshQueueBadge() {
+  const queueBtn = navButtons.find((b) => b.dataset.tab === "queue");
   if (!queueBtn) return;
   queueBtn.querySelector(".badge")?.remove();
   const n = pendingCount();
@@ -1304,7 +1571,6 @@ onChange(() => {
   refreshQueueBadge();
   if (activeView === "queue" && queueBody) renderQueue(queueBody);
 });
-var activeView = "ask";
 function setActive(id) {
   const btn = navButtons.find((b) => b.dataset.tab === id);
   if (!btn) return;
@@ -1330,14 +1596,19 @@ window.setInterval(() => {
   feed.prepend(renderMsg(liveFor(activeView), activeView, true));
   while (feed.childElementCount > 14) feed.lastElementChild?.remove();
 }, 4500);
-var validTabs = new Set(navItems.map((n) => n.id));
-Promise.all([hydrate(), hydratePrefs()]).then(() => {
-  refreshQueueBadge();
+Promise.all([hydrate(), hydratePrefs(), hydrateCustom()]).then(() => {
+  rebuildNav();
   if (queueBody) renderQueue(queueBody);
   const last = getLastTab();
+  const validTabs = new Set(navItems.map((n) => n.id));
   requestAnimationFrame(() => setActive(last && validTabs.has(last) ? last : "ask"));
 });
-requestAnimationFrame(() => setActive("ask"));
+onCustomChange(() => {
+  const current = activeView;
+  rebuildNav();
+  const validTabs = new Set(navItems.map((n) => n.id));
+  setActive(validTabs.has(current) ? current : "add");
+});
 window.addEventListener("resize", () => {
   const cur = navButtons.find((b) => b.getAttribute("aria-selected") === "true");
   if (cur) {

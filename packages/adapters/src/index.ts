@@ -13,6 +13,7 @@ export * from "./discordReadAdapter.js";
 export * from "./steamReadAdapter.js";
 export * from "./redditReadAdapter.js";
 export * from "./githubReadAdapter.js";
+export * from "./customSourceAdapter.js";
 
 import type { CommsSourceAdapter } from "@help-me-comms/core";
 import { DiscordAdapter } from "./discordAdapter.js";

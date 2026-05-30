@@ -18,6 +18,12 @@ import { liveFor, recentFor, type FeedMsg } from "./feed";
 import { addSignal, localConfirmations } from "./signals";
 import { clearResolved, enqueue, hydrate as hydrateQueue, list as queueList, onChange as onQueueChange, pendingCount, remove as removeQueued, setStatus, updateBody, type QueueItem } from "./queue";
 import { getLastTab, getTargets, hydratePrefs, setLastTab, setTargets } from "./prefs";
+import { addCustom, hydrateCustom, listCustom, onCustomChange, removeCustom, type CustomKind, type CustomSource } from "./customSources";
+import { CustomSourceAdapter } from "@help-me-comms/adapters";
+
+// module-level UI state, declared before any function that uses it
+let queueBody: HTMLElement | null = null;
+let activeView = "ask";
 
 initShaderBackground("bg");
 initParallax();
@@ -315,7 +321,6 @@ function buildPulseView(): HTMLElement {
 
 /* ---------- Queue: review & approve drafts (closes the loop) ---------- */
 const ACTION_LABEL: Record<string, string> = { reply: "Reply", poll: "Poll", known_issue: "Known Issue", faq: "FAQ", announcement: "Announcement" };
-let queueBody: HTMLElement | null = null;
 
 function renderQueue(container: HTMLElement) {
   container.innerHTML = "";
@@ -399,29 +404,143 @@ const indicator = document.getElementById("ind") as HTMLElement;
 const views = document.getElementById("views") as HTMLElement;
 
 type NavItem = { id: string; label: string; accent: string };
-const navItems: NavItem[] = [
-  { id: "ask", label: "Ask", accent: "#4cc2ff" },
-  { id: "pulse", label: "Pulse", accent: "#2ee06a" },
-  ...connected.map((s) => ({ id: s.source, label: meta(s.source).label, accent: meta(s.source).color })),
-  { id: "queue", label: "Queue", accent: "#e0964a" },
-];
+const CUSTOM_COLORS = ["#4cc2ff", "#7d88c8", "#e0964a", "#2ee06a", "#66c0f4", "#c9d1d9"];
 
-views.append(buildAskView(), buildPulseView(), ...connected.map((s) => buildSourceView(s)), buildQueueView());
+// Real feed view for a user-added Discourse/RSS source (fetched live, no mock).
+function buildCustomFeedView(cs: CustomSource): HTMLElement {
+  const view = el("div", "view");
+  view.id = `view-${cs.id}`;
+  const head = el("div", "card glass");
+  const hr = el("div", "srchead");
+  const dot = el("span", "sdot"); dot.style.color = cs.color;
+  hr.append(dot, el("span", "sname", cs.label), el("span", "sreach", cs.type));
+  head.append(hr, el("div", "addhint", cs.url));
+  const feed = el("div", "feed");
+  feed.append(el("div", "addhint", "Loading…"));
+  view.append(head, feed);
 
-const navButtons: HTMLButtonElement[] = navItems.map((item) => {
-  const b = el("button", "tab") as HTMLButtonElement;
-  b.dataset.tab = item.id;
-  b.dataset.accent = item.accent;
-  b.style.setProperty("--a", item.accent);
-  b.append(el("span", "led"), document.createTextNode(item.label));
-  b.addEventListener("click", () => setActive(item.id));
-  nav.append(b);
-  return b;
-});
+  const adapter = new CustomSourceAdapter({ id: cs.id, label: cs.label, type: cs.type as CustomKind, url: cs.url });
+  adapter.getThread({ source: "forum", externalId: cs.id }, workspace).then((thread) => {
+    feed.innerHTML = "";
+    if (!thread.items.length) { feed.append(el("div", "addhint", "No items yet (or the source blocked the request from the browser).")); return; }
+    for (const it of thread.items.slice(0, 12)) {
+      feed.append(renderMsg({ author: cs.label, role: "player", body: it.body, ago: "", sentiment: "neu", up: 0 }, "forum", false));
+    }
+  }).catch(() => { feed.innerHTML = ""; feed.append(el("div", "addhint", "Couldn't reach that source from the browser.")); });
+
+  return view;
+}
+
+// The "Add" tab — wire up any Discourse forum or RSS/Atom feed, no code.
+function buildAddView(): HTMLElement {
+  const view = el("div", "view");
+  view.id = "view-add";
+  const form = el("div", "addform card glass");
+  form.append(el("div", "section-label", "Add a custom source"));
+
+  const nameWrap = el("div");
+  nameWrap.append(el("label", undefined, "Name"));
+  const name = el("input") as HTMLInputElement; name.placeholder = "My Game Forum";
+  nameWrap.append(name);
+
+  const row = el("div", "row2");
+  const typeWrap = el("div");
+  typeWrap.append(el("label", undefined, "Type"));
+  const type = el("select") as HTMLSelectElement;
+  for (const [v, t] of [["discourse", "Discourse forum"], ["rss", "RSS / Atom feed"]]) {
+    const o = el("option") as HTMLOptionElement; o.value = v; o.textContent = t; type.append(o);
+  }
+  typeWrap.append(type);
+  const colorWrap = el("div");
+  colorWrap.append(el("label", undefined, "Accent"));
+  const color = el("select") as HTMLSelectElement;
+  for (const c of CUSTOM_COLORS) { const o = el("option") as HTMLOptionElement; o.value = c; o.textContent = c; color.append(o); }
+  colorWrap.append(color);
+  row.append(typeWrap, colorWrap);
+
+  const urlWrap = el("div");
+  urlWrap.append(el("label", undefined, "URL"));
+  const url = el("input") as HTMLInputElement; url.placeholder = "https://forum.mygame.com  or  https://site.com/feed.xml";
+  urlWrap.append(url);
+
+  const add = el("button", "primary") as HTMLButtonElement;
+  add.textContent = "Add source ✦";
+  add.addEventListener("click", () => {
+    const label = name.value.trim(); const u = url.value.trim();
+    if (!label || !u) { (label ? url : name).focus(); return; }
+    addCustom({ label, type: type.value as CustomKind, url: u, color: color.value });
+    name.value = ""; url.value = "";
+  });
+
+  form.append(nameWrap, row, urlWrap, add);
+  form.append(el("div", "addhint", "Discourse forums expose a public JSON API. RSS/Atom works for devlogs, patch-note feeds, and many forums. Read-only — nothing is ever posted. Some sites may block browser requests (CORS); those still work via the team app / MCP."));
+  view.append(form);
+
+  // existing custom sources
+  const mine = el("div", "result");
+  const renderMine = () => {
+    mine.innerHTML = "";
+    const all = listCustom();
+    if (!all.length) return;
+    mine.append(el("div", "section-label", "Your sources"));
+    for (const cs of all) {
+      const r = el("div", "mysrc");
+      const led = el("span", "led"); led.style.color = cs.color;
+      const meta2 = el("div");
+      meta2.append(el("div", "mn", cs.label), el("div", "mu", `${cs.type} · ${cs.url}`));
+      const rm = el("button", "dbtn rm", "Remove") as HTMLButtonElement;
+      rm.addEventListener("click", () => removeCustom(cs.id));
+      r.append(led, meta2, rm);
+      mine.append(r);
+    }
+  };
+  renderMine();
+  onCustomChange(renderMine);
+  view.append(mine);
+  return view;
+}
+
+let navItems: NavItem[] = [];
+let navButtons: HTMLButtonElement[] = [];
+
+function rebuildNav() {
+  const custom = listCustom();
+  navItems = [
+    { id: "ask", label: "Ask", accent: "#4cc2ff" },
+    { id: "pulse", label: "Pulse", accent: "#2ee06a" },
+    ...connected.map((s) => ({ id: s.source, label: meta(s.source).label, accent: meta(s.source).color })),
+    ...custom.map((c) => ({ id: c.id, label: c.label, accent: c.color })),
+    { id: "queue", label: "Queue", accent: "#e0964a" },
+    { id: "add", label: "+ Add", accent: "#7d88c8" },
+  ];
+
+  views.innerHTML = "";
+  views.append(
+    buildAskView(),
+    buildPulseView(),
+    ...connected.map((s) => buildSourceView(s)),
+    ...custom.map((c) => buildCustomFeedView(c)),
+    buildQueueView(),
+    buildAddView(),
+  );
+
+  nav.querySelectorAll(".tab").forEach((b) => b.remove());
+  navButtons = navItems.map((item) => {
+    const b = el("button", "tab") as HTMLButtonElement;
+    b.dataset.tab = item.id;
+    b.dataset.accent = item.accent;
+    b.style.setProperty("--a", item.accent);
+    b.append(el("span", "led"), document.createTextNode(item.label));
+    b.addEventListener("click", () => setActive(item.id));
+    nav.append(b);
+    return b;
+  });
+  refreshQueueBadge();
+}
 
 // pending-draft badge on the Queue tab; live-updates as drafts come/go
-const queueBtn = navButtons.find((b) => b.dataset.tab === "queue");
 function refreshQueueBadge() {
+  const queueBtn = navButtons.find((b) => b.dataset.tab === "queue");
   if (!queueBtn) return;
   queueBtn.querySelector(".badge")?.remove();
   const n = pendingCount();
@@ -432,7 +551,6 @@ onQueueChange(() => {
   if (activeView === "queue" && queueBody) renderQueue(queueBody);
 });
 
-let activeView: string = "ask";
 function setActive(id: string) {
   const btn = navButtons.find((b) => b.dataset.tab === id);
   if (!btn) return;
@@ -461,16 +579,22 @@ window.setInterval(() => {
   while (feed.childElementCount > 14) feed.lastElementChild?.remove();
 }, 4500);
 
-// Hydrate persisted state, then restore the last tab and queue.
-const validTabs = new Set(navItems.map((n) => n.id));
-Promise.all([hydrateQueue(), hydratePrefs()]).then(() => {
-  refreshQueueBadge();
+// Hydrate persisted state, then build nav and restore the last tab + queue.
+Promise.all([hydrateQueue(), hydratePrefs(), hydrateCustom()]).then(() => {
+  rebuildNav();
   if (queueBody) renderQueue(queueBody);
   const last = getLastTab();
+  const validTabs = new Set(navItems.map((n) => n.id));
   requestAnimationFrame(() => setActive(last && validTabs.has(last) ? last : "ask"));
 });
-// paint immediately so it's not blank while storage resolves
-requestAnimationFrame(() => setActive("ask"));
+
+// adding/removing a custom source rebuilds the nav, keeping the current tab if it still exists
+onCustomChange(() => {
+  const current = activeView;
+  rebuildNav();
+  const validTabs = new Set(navItems.map((n) => n.id));
+  setActive(validTabs.has(current) ? current : "add");
+});
 
 window.addEventListener("resize", () => {
   const cur = navButtons.find((b) => b.getAttribute("aria-selected") === "true");
