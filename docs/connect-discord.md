@@ -96,3 +96,21 @@ posting would route through the approval-safe action path, never this adapter.
 adapters power the MCP server and team web app — set the vars above, run
 `pnpm --filter @help-me-comms/web dev`, and the live data flows through the same
 screens. Each source falls back to the safe mock until its vars are set.
+
+---
+
+# Connect GitHub Issues (live — token optional)
+
+Great for open-source mods, loaders, and tools — treats Issues (and their
+comment/reaction volume) as a community signal.
+
+1. Public repos work with **no token** (just rate-limited). For higher limits or
+   private repos, make a fine-grained PAT at
+   **https://github.com/settings/tokens** with read-only Issues access.
+2. In `.env`:
+   ```bash
+   HELP_ME_GITHUB_REPOS=owner/repo,owner/another-mod
+   HELP_ME_GITHUB_TOKEN=         # optional
+   ```
+
+Reads issues via the GitHub search API (skips PRs). Read-only; write disabled.

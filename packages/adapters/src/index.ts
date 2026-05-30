@@ -12,6 +12,7 @@ export * from "./helpdeskAdapter.js";
 export * from "./discordReadAdapter.js";
 export * from "./steamReadAdapter.js";
 export * from "./redditReadAdapter.js";
+export * from "./githubReadAdapter.js";
 
 import type { CommsSourceAdapter } from "@help-me-comms/core";
 import { DiscordAdapter } from "./discordAdapter.js";
@@ -22,6 +23,7 @@ import { GithubDiscussionsAdapter } from "./githubAdapter.js";
 import { discordReadFromEnv } from "./discordReadAdapter.js";
 import { steamReadFromEnv } from "./steamReadAdapter.js";
 import { redditReadFromEnv } from "./redditReadAdapter.js";
+import { githubReadFromEnv } from "./githubReadAdapter.js";
 
 export function createDefaultMockAdapters(): CommsSourceAdapter[] {
   return [
