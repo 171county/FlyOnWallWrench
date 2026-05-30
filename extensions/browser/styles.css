@@ -315,3 +315,18 @@ body.panel .shell { min-height: 100vh; }
 .ev .evsrc { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); font-weight: 700; }
 .ev .evsum { font-size: 12px; color: #dce6ff; line-height: 1.45; }
 .ev .evmeta { font-size: 10.5px; color: var(--faint); margin-top: 5px; }
+
+/* ---------- tab outline → metallic copper ----------
+   Copper frames the tab bar regardless of active tab; the sliding pill and
+   per-tab LED dots keep their accent identity colors. */
+:root { --copper: #c77b3e; --copper-lit: #e6a062; }
+.tabs {
+  border: 1px solid color-mix(in srgb, var(--copper-lit) 60%, transparent);
+  box-shadow:
+    0 14px 34px rgba(0,0,0,.45),
+    inset 0 1px 0 rgba(255,255,255,.14),
+    inset 0 0 0 1px color-mix(in srgb, var(--copper) 22%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--copper) 78%, transparent),
+    0 0 20px -4px color-mix(in srgb, var(--copper) 70%, transparent),
+    0 16px 46px -16px var(--tab-accent, transparent);
+}

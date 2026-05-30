@@ -53,9 +53,10 @@
     <text x="72" y="32" fill="#38e8ff" font-size="10" letter-spacing="2.2" font-weight="700">FLYONWALL · COMMUNITY BRAIN</text>
     <text x="72" y="56" font-size="20" font-weight="800" fill="url(#g)">Help Me Comms</text>
 
-    <!-- ACCENT TAB BAR (nav glow = magenta because Evidence active) -->
+    <!-- ACCENT TAB BAR — copper outline, magenta active pill (Evidence) -->
     <g transform="translate(20,76)">
-      <rect width="352" height="46" rx="16" fill="url(#gl)" stroke="#ff4d9d" stroke-opacity="0.5" filter="url(#drop)"/>
+      <rect x="-1.5" y="-1.5" width="355" height="49" rx="17.5" fill="none" stroke="#c77b3e" stroke-opacity="0.5" stroke-width="3" filter="url(#glow)"/>
+      <rect width="352" height="46" rx="16" fill="url(#gl)" stroke="#e6a062" stroke-opacity="0.85" stroke-width="1.5" filter="url(#drop)"/>
       <!-- active pill: Evidence -->
       <rect x="181" y="5" width="86" height="36" rx="11" fill="#ff4d9d" filter="url(#glow)"/>
       <rect x="181" y="5" width="86" height="36" rx="11" fill="#ff4d9d"/>
