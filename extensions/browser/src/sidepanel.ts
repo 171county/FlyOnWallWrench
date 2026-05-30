@@ -238,7 +238,7 @@ function renderMsg(m: FeedMsg, kind: string, live = false, showSource = false): 
     if (replyBtn.classList.contains("queued")) return;
     // authentic reply in this platform's voice, folding the message as evidence
     const draft = composeDraft({
-      kind: "reply", source: kind, topic: m.body,
+      kind: "reply", source: kind as SourceKind, topic: m.body,
       intent: classifyIntent(m.body),
       evidence: [{ id: m.author, source: kind as SourceKind, title: m.author, summary: m.body, matchedTerms: [], confidenceSignals: { semanticMatch: 0.6, exactTermMatch: 0.5, recency: 0.9, sourceTrust: 0.6, confirmationCount: m.up, sameVersionBonus: 0, resolvedBonus: 0, duplicatePenalty: 0, lowQualityPenalty: 0 }, redacted: true }],
     });

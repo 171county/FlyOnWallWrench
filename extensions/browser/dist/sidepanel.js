@@ -114,13 +114,13 @@ function scoreEvidence(item) {
   const s = item.confidenceSignals;
   return s.semanticMatch * 0.28 + s.exactTermMatch * 0.18 + s.recency * 0.16 + s.sourceTrust * 0.12 + Math.min(s.confirmationCount / 10, 1) * 0.12 + s.sameVersionBonus * 0.06 + s.resolvedBonus * 0.05 - s.duplicatePenalty * 0.08 - s.lowQualityPenalty * 0.08;
 }
-function rankEvidence(items) {
-  return [...items].sort((a, b) => scoreEvidence(b) - scoreEvidence(a));
+function rankEvidence(items2) {
+  return [...items2].sort((a, b) => scoreEvidence(b) - scoreEvidence(a));
 }
-function aggregateConfidence(items) {
-  if (items.length === 0)
+function aggregateConfidence(items2) {
+  if (items2.length === 0)
     return 0;
-  const top = rankEvidence(items).slice(0, 5);
+  const top = rankEvidence(items2).slice(0, 5);
   const avg = top.reduce((sum, item) => sum + scoreEvidence(item), 0) / top.length;
   return Math.max(0, Math.min(1, avg));
 }
@@ -128,37 +128,6 @@ function aggregateConfidence(items) {
 // ../../packages/core/dist/privacyRedactor.js
 function privacyNotice(retention) {
   return retention === "ephemeral" ? "Scoped evidence was used for this task and should be discarded by MCP-owned storage after the response." : "Workspace is configured for user-owned retention; MCP-owned storage should still avoid sensitive bodies.";
-}
-
-// ../../packages/core/dist/actions.js
-function id(prefix) {
-  return `${prefix}_${Math.random().toString(36).slice(2, 10)}`;
-}
-function createActionPlan(input) {
-  return {
-    actionId: id("act"),
-    actionType: input.actionType,
-    targetRef: input.targetRef,
-    targetSummary: input.targetSummary,
-    draft: input.draft,
-    approvalRequired: true,
-    clientActions: [
-      {
-        type: "present_for_user_approval",
-        allowedClient: input.allowedClient ?? "web_app",
-        requiresVisibleUserConfirmation: true
-      }
-    ],
-    evidenceRefs: input.evidenceRefs ?? [],
-    status: "drafted"
-  };
-}
-function queueAction(plan) {
-  return {
-    ...plan,
-    approvalRequired: true,
-    status: "queued"
-  };
 }
 
 // ../../packages/core/dist/communityHelp.js
@@ -260,6 +229,151 @@ function suggestedActionsForIntent(intent) {
     ];
   }
   return [{ type: "draft_reply", label: "Draft a response", requiresApproval: true }];
+}
+
+// ../../packages/core/dist/drafts.js
+var VOICE = {
+  discord: "casual, lowercase, fast",
+  reddit: "PSA/structured with specs",
+  steam_reviews: "blunt, plain",
+  steam_news: "official update tone",
+  forum: "structured, version-stamped",
+  github_discussions: "technical, repro-focused",
+  github_issues: "technical, repro-focused"
+};
+var voiceOf = (s) => VOICE[s] ?? "clear and neutral";
+function topEvidence(ev, n) {
+  return (ev ?? []).slice(0, n).map((e) => `- ${e.summary}`);
+}
+function replyBody(req) {
+  const { source, topic } = req;
+  const ev = topEvidence(req.evidence, 2);
+  switch (source) {
+    case "discord":
+      return [
+        `hey \u2014 re: ${topic.toLowerCase()}, this is a known one rn \u{1F447}`,
+        `can you drop your full load order + crash log? (and confirm you verified files / updated the script extender)`,
+        ev.length ? `what's worked for others:
+${ev.join("\n")}` : `a few folks fixed it by rolling back the most recent mod and retesting from an earlier save`
+      ].join("\n\n");
+    case "reddit":
+      return [
+        `Sounds like the ${topic} a lot of people are hitting after the patch \u2014 you're not alone.`,
+        `To narrow it down, could you post: your specs, game/mod version, and full load order? Run LOOT and paste the sorted order if you can.`,
+        ev.length ? `What's helped so far:
+${ev.join("\n")}` : `Common fix: verify files, then disable the most recent mod and retest. If it clears, it's a conflict \u2014 grab the compat patch.`
+      ].join("\n\n");
+    case "steam_reviews":
+      return [
+        `Thanks for flagging the ${topic}. We can reproduce it and a fix is in the works.`,
+        `In the meantime: verify integrity of game files, and disable the in-game overlay \u2014 that's cleared it for several players.`
+      ].join("\n\n");
+    case "forum":
+      return [
+        `**Re: ${topic}**`,
+        `Confirmed \u2014 this is a known issue introduced in the latest version. Tracking it now.`,
+        `To help us triage, please attach your full crash log and the output of LOOT, and note whether it repros on a clean/vanilla profile.`,
+        ev.length ? `Known workarounds:
+${ev.join("\n")}` : `Workaround: roll back to the previous version or use the steps in the sticky.`
+      ].join("\n\n");
+    default:
+      return [
+        `Re: ${topic} \u2014 this looks like a known issue. Could you share your version, platform, and steps to reproduce?`,
+        ev.length ? `What's helped:
+${ev.join("\n")}` : `Workaround: verify files and retest after disabling recent changes.`
+      ].join("\n\n");
+  }
+}
+function knownIssueBody(req) {
+  const widespread = (req.prevalence ?? 0) >= 0.4;
+  const ev = topEvidence(req.evidence, 3);
+  const title = `\u{1F4CC} Known Issue: ${req.topic}`;
+  const body = [
+    `**Status:** ${widespread ? "Widespread \u2014 acknowledged" : "Under investigation"}`,
+    `We're aware of ${req.topic}${widespread ? " affecting many players" : ""} and are looking into it. Please don't open new reports for this \u2014 add details here instead.`,
+    ev.length ? `**Reports so far:**
+${ev.join("\n")}` : "",
+    `**What helps right now:** verify game files, disable the most recent mod/overlay, and retest from an earlier save.`,
+    `**To help us fix it faster:** post your platform, version, full load order, and a crash log.`
+  ].filter(Boolean).join("\n\n");
+  return { title, body };
+}
+function faqBody(req) {
+  return {
+    title: `FAQ: ${req.topic}`,
+    body: [
+      `**Q: ${req.topic}?**`,
+      `A: This is a known issue. First steps:`,
+      `1. Verify game files.
+2. Disable the most recently added mod/overlay.
+3. Retest from an earlier save.
+4. If it clears, it's a conflict \u2014 install the compatibility patch.`,
+      `Still stuck? Post your version, load order, and crash log and we'll take a look.`
+    ].join("\n\n")
+  };
+}
+function pollBody(req) {
+  return {
+    title: `Quick poll: ${req.topic}`,
+    body: [
+      `Trying to gauge how widespread ${req.topic} is. React/vote:`,
+      `\u{1F534} Hitting it consistently
+\u{1F7E1} Sometimes / after specific actions
+\u{1F7E2} Not seeing it`,
+      `If you're affected, drop your platform + version so we can spot a pattern.`
+    ].join("\n\n")
+  };
+}
+function announcementBody(req) {
+  return {
+    title: `Update on: ${req.topic}`,
+    body: [
+      `We've seen the reports about ${req.topic} and wanted to give a heads-up.`,
+      `We can reproduce it internally and a hotfix is in progress. We'll update this post when it ships.`,
+      `Thanks for the detailed reports and patience \u{1F64F}`
+    ].join("\n\n")
+  };
+}
+var ACTION_TYPE = {
+  reply: "reply",
+  known_issue: "known_issue",
+  faq: "faq",
+  poll: "poll",
+  announcement: "announcement",
+  patch_notes: "announcement"
+};
+function composeDraft(req) {
+  let title;
+  let body;
+  switch (req.kind) {
+    case "reply":
+      body = replyBody(req);
+      break;
+    case "known_issue":
+      ({ title, body } = knownIssueBody(req));
+      break;
+    case "faq":
+      ({ title, body } = faqBody(req));
+      break;
+    case "poll":
+      ({ title, body } = pollBody(req));
+      break;
+    case "announcement":
+    case "patch_notes":
+      ({ title, body } = announcementBody(req));
+      break;
+    default:
+      body = replyBody(req);
+  }
+  return {
+    kind: req.kind,
+    source: req.source,
+    actionType: ACTION_TYPE[req.kind],
+    title,
+    body,
+    requiresApproval: true,
+    voiceNote: `${req.source} voice: ${voiceOf(req.source)}`
+  };
 }
 
 // ../../packages/core/dist/mockWorkspace.js
@@ -689,6 +803,43 @@ function localConfirmations(query) {
   return { count: hits.length, sources: [...new Set(hits.map((h) => h.source))] };
 }
 
+// src/queue.ts
+var items = [];
+var listeners2 = /* @__PURE__ */ new Set();
+var seq = 0;
+function enqueue(input) {
+  const item = { ...input, id: `q_${Date.now()}_${seq++}`, createdAt: Date.now(), status: "queued" };
+  items.unshift(item);
+  emit();
+  return item;
+}
+function setStatus(id, status) {
+  const it = items.find((i) => i.id === id);
+  if (it) {
+    it.status = status;
+    emit();
+  }
+}
+function updateBody(id, body) {
+  const it = items.find((i) => i.id === id);
+  if (it) {
+    it.body = body;
+    emit();
+  }
+}
+function list() {
+  return items;
+}
+function pendingCount() {
+  return items.filter((i) => i.status === "queued").length;
+}
+function onChange(fn) {
+  listeners2.add(fn);
+}
+function emit() {
+  listeners2.forEach((fn) => fn());
+}
+
 // src/sidepanel.ts
 initShaderBackground("bg");
 initParallax();
@@ -741,9 +892,9 @@ function pillsEl(sources) {
   }
   return pills;
 }
-function evidenceEl(items) {
-  const list = el("div", "evlist");
-  for (const item of items.slice(0, 3)) {
+function evidenceEl(items2) {
+  const list2 = el("div", "evlist");
+  for (const item of items2.slice(0, 3)) {
     const ev = el("div", "ev");
     const top = el("div", "evtop");
     const dot = el("span", "evdot");
@@ -752,9 +903,9 @@ function evidenceEl(items) {
     const c = item.confidenceSignals?.confirmationCount;
     ev.append(top, el("div", "evsum", item.summary ?? item.title ?? ""));
     if (typeof c === "number") ev.append(el("div", "evmeta", `${item.source} \xB7 ${c} confirmation${c === 1 ? "" : "s"}`));
-    list.append(ev);
+    list2.append(ev);
   }
-  return list;
+  return list2;
 }
 function answerCard(data) {
   const card = el("div", "card glass lux");
@@ -863,20 +1014,23 @@ function buildAskView() {
     if (!sel.length) return;
     out.innerHTML = "";
     const card = el("div", "card glass lux");
-    card.append(el("div", "section-label", `Queued to ${sel.length} target${sel.length === 1 ? "" : "s"} \u2014 nothing posts until you approve`));
-    const list = el("div", "queued");
+    card.append(el("div", "section-label", `Queued ${sel.length} draft${sel.length === 1 ? "" : "s"} \u2014 review & approve in the Queue tab`));
+    const listEl = el("div", "queued");
+    const intent = classifyIntent(message);
     for (const kind of sel) {
-      const plan = queueAction(createActionPlan({ actionType: "poll", draft: message, targetRef: kind, allowedClient: "web_app" }));
+      const draft = composeDraft({ kind: "poll", source: kind, topic: message, intent });
+      enqueue({ actionType: draft.actionType, source: kind, title: draft.title, body: draft.body });
       const row = el("div", "qrow");
       const led = el("span", "qled");
       led.style.color = meta(kind).color;
-      row.append(led, el("span", void 0, `Poll \u2192 ${meta(kind).label}`), el("span", "qstate", plan.approvalRequired ? "Approval" : plan.status));
-      list.append(row);
+      row.append(led, el("span", void 0, `Poll \u2192 ${meta(kind).label}`), el("span", "qstate", "Approval"));
+      listEl.append(row);
     }
-    card.append(list);
-    const pv = el("div", "privacy");
-    pv.append(el("span", "dot"), el("span", void 0, "Drafts are queued locally. Approve each in the client to post."));
-    card.append(pv);
+    card.append(listEl);
+    const cta = el("button", "btn2 go");
+    cta.textContent = `Review in Queue (${pendingCount()})`;
+    cta.addEventListener("click", () => setActive("queue"));
+    card.append(cta);
     out.append(card);
   });
   return view;
@@ -913,7 +1067,14 @@ function renderMsg(m, kind, live = false, showSource = false) {
   const replyBtn = el("button", "rbtn", "Draft reply");
   replyBtn.addEventListener("click", () => {
     if (replyBtn.classList.contains("queued")) return;
-    queueAction(createActionPlan({ actionType: "reply", draft: "(reply draft)", targetRef: kind, allowedClient: "web_app" }));
+    const draft = composeDraft({
+      kind: "reply",
+      source: kind,
+      topic: m.body,
+      intent: classifyIntent(m.body),
+      evidence: [{ id: m.author, source: kind, title: m.author, summary: m.body, matchedTerms: [], confidenceSignals: { semanticMatch: 0.6, exactTermMatch: 0.5, recency: 0.9, sourceTrust: 0.6, confirmationCount: m.up, sameVersionBonus: 0, resolvedBonus: 0, duplicatePenalty: 0, lowQualityPenalty: 0 }, redacted: true }]
+    });
+    enqueue({ actionType: draft.actionType, source: kind, title: draft.title, body: draft.body });
     replyBtn.className = "rbtn queued";
     replyBtn.textContent = "Queued \xB7 approval";
   });
@@ -971,15 +1132,79 @@ function buildPulseView() {
   view.append(head, feed);
   return view;
 }
+var ACTION_LABEL = { reply: "Reply", poll: "Poll", known_issue: "Known Issue", faq: "FAQ", announcement: "Announcement" };
+var queueBody = null;
+function renderQueue(container) {
+  container.innerHTML = "";
+  const items2 = list();
+  if (items2.length === 0) {
+    const empty = el("div", "queue-empty");
+    empty.append(el("span", "big", "\u270E"), document.createTextNode("No drafts yet. Use \u201CDraft reply\u201D on a feed message, or \u201CQueue broadcast\u201D in Ask \u2014 they land here for your approval."));
+    container.append(empty);
+    return;
+  }
+  for (const item of items2) renderDraftCard(container, item);
+}
+function renderDraftCard(container, item) {
+  const card = el("div", "draft card glass lux");
+  const dh = el("div", "dh");
+  const kind = el("span", "dkind", ACTION_LABEL[item.actionType] ?? item.actionType);
+  kind.style.background = meta(item.source).color;
+  const src = el("span", "dsrc");
+  const led = el("span", "led");
+  led.style.color = meta(item.source).color;
+  src.append(led, document.createTextNode(meta(item.source).label));
+  const state = el("span", `dstate ${item.status}`, item.status);
+  dh.append(kind, src, state);
+  card.append(dh);
+  if (item.title) card.append(el("div", "dtitle", item.title));
+  const body = el("textarea", "dbody");
+  body.value = item.body;
+  body.disabled = item.status !== "queued";
+  body.addEventListener("input", () => updateBody(item.id, body.value));
+  card.append(body);
+  if (item.status === "queued") {
+    const actions = el("div", "dactions");
+    const approve = el("button", "dbtn approve", "\u2713 Approve");
+    approve.addEventListener("click", () => setStatus(item.id, "approved"));
+    const reject = el("button", "dbtn reject", "Reject");
+    reject.addEventListener("click", () => setStatus(item.id, "rejected"));
+    const copy = el("button", "dbtn copy", "Copy");
+    copy.addEventListener("click", async () => {
+      await navigator.clipboard?.writeText(body.value).catch(() => {
+      });
+      copy.textContent = "Copied \u2713";
+      window.setTimeout(() => copy.textContent = "Copy", 1500);
+    });
+    actions.append(approve, reject, copy);
+    card.append(actions);
+  } else if (item.status === "approved") {
+    const pv = el("div", "privacy");
+    pv.append(el("span", "dot"), el("span", void 0, "Approved \u2014 paste into the client to post. Help Me never posts on its own."));
+    card.append(pv);
+  }
+  container.append(card);
+}
+function buildQueueView() {
+  const view = el("div", "view");
+  view.id = "view-queue";
+  view.append(el("div", "section-label", "Approval queue \xB7 nothing posts until you approve"));
+  const body = el("div", "result");
+  queueBody = body;
+  renderQueue(body);
+  view.append(body);
+  return view;
+}
 var nav = document.getElementById("nav");
 var indicator = document.getElementById("ind");
 var views = document.getElementById("views");
 var navItems = [
   { id: "ask", label: "Ask", accent: "#4cc2ff" },
   { id: "pulse", label: "Pulse", accent: "#2ee06a" },
-  ...connected.map((s) => ({ id: s.source, label: meta(s.source).label, accent: meta(s.source).color }))
+  ...connected.map((s) => ({ id: s.source, label: meta(s.source).label, accent: meta(s.source).color })),
+  { id: "queue", label: "Queue", accent: "#e0964a" }
 ];
-views.append(buildAskView(), buildPulseView(), ...connected.map((s) => buildSourceView(s)));
+views.append(buildAskView(), buildPulseView(), ...connected.map((s) => buildSourceView(s)), buildQueueView());
 var navButtons = navItems.map((item) => {
   const b = el("button", "tab");
   b.dataset.tab = item.id;
@@ -990,17 +1215,29 @@ var navButtons = navItems.map((item) => {
   nav.append(b);
   return b;
 });
+var queueBtn = navButtons.find((b) => b.dataset.tab === "queue");
+function refreshQueueBadge() {
+  if (!queueBtn) return;
+  queueBtn.querySelector(".badge")?.remove();
+  const n = pendingCount();
+  if (n > 0) queueBtn.append(el("span", "badge", String(n)));
+}
+onChange(() => {
+  refreshQueueBadge();
+  if (activeView === "queue" && queueBody) renderQueue(queueBody);
+});
 var activeView = "ask";
-function setActive(id2) {
-  const btn = navButtons.find((b) => b.dataset.tab === id2);
+function setActive(id) {
+  const btn = navButtons.find((b) => b.dataset.tab === id);
   if (!btn) return;
   navButtons.forEach((b) => b.setAttribute("aria-selected", String(b === btn)));
   nav.style.setProperty("--tab-accent", btn.dataset.accent ?? "#4cc2ff");
   indicator.style.transform = `translateX(${btn.offsetLeft}px)`;
   indicator.style.width = `${btn.offsetWidth}px`;
   btn.scrollIntoView({ inline: "nearest", block: "nearest", behavior: "smooth" });
-  views.querySelectorAll(".view").forEach((v) => v.classList.toggle("active", v.id === `view-${id2}`));
-  activeView = id2;
+  views.querySelectorAll(".view").forEach((v) => v.classList.toggle("active", v.id === `view-${id}`));
+  activeView = id;
+  if (id === "queue" && queueBody) renderQueue(queueBody);
 }
 window.setInterval(() => {
   if (activeView === "pulse" && pulseFeed) {
