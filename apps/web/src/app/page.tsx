@@ -40,6 +40,10 @@ export default function Page() {
           </article>
         ))}
       </section>
+
+      <p className="hostnote">
+        Team host · for a single dev or modder, the browser &amp; VS Code side panels run this on their own — no tab required.
+      </p>
     </main>
   );
 }

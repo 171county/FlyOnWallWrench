@@ -4,9 +4,7 @@
   "description": "Ask Help Me about selected logs, code, config, or community evidence. Local edits require approval.",
   "version": "0.1.0",
   "publisher": "local-dev",
-  "engines": {
-    "vscode": "^1.99.0"
-  },
+  "engines": { "vscode": "^1.99.0" },
   "categories": ["AI", "Other"],
   "activationEvents": [
     "onCommand:helpMe.askAboutSelection",
@@ -23,11 +21,6 @@
     "configuration": {
       "title": "Help Me Comms",
       "properties": {
-        "helpMe.localAppUrl": {
-          "type": "string",
-          "default": "http://localhost:3000",
-          "description": "Local Help Me web app URL used for demo calls."
-        },
         "helpMe.sendSelectedTextOnly": {
           "type": "boolean",
           "default": true,
@@ -37,13 +30,18 @@
     }
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json --noEmit && node build.mjs",
     "test": "echo \"add vscode tests\"",
     "lint": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@help-me-comms/core": "workspace:*",
+    "@help-me-comms/adapters": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
     "@types/vscode": "^1.99.0",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "esbuild": "^0.24.2"
   }
 }

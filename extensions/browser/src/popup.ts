@@ -1,5 +1,5 @@
-import { initShaderBackground } from "./shaderBg.js";
-import { initParallax } from "./spatial.js";
+import { initShaderBackground } from "./shaderBg";
+import { initParallax } from "./spatial";
 
 initShaderBackground("bg");
 initParallax();

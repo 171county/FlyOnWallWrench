@@ -1,4 +1,8 @@
 import * as vscode from "vscode";
+import { communityHelp, mockWorkspaceContext, type CommunityHelpRequest } from "@help-me-comms/core";
+import { createDefaultMockAdapters } from "@help-me-comms/adapters";
+
+const adapters = createDefaultMockAdapters();
 
 let panel: vscode.WebviewPanel | undefined;
 
@@ -27,25 +31,20 @@ async function run(mode: string, prefix?: string) {
   const selection = editor.document.getText(editor.selection);
   if (!selection.trim()) { vscode.window.showInformationMessage("Select the log, error, or code snippet you want to ask about."); return; }
 
-  const config = vscode.workspace.getConfiguration("helpMe");
-  const localAppUrl = config.get<string>("localAppUrl", "http://localhost:3000");
   const message = `${prefix ? `${prefix}\n\n` : ""}${selection}`;
 
   const p = getPanel();
   p.reveal(vscode.ViewColumn.Beside);
   p.webview.postMessage({ type: "loading", query: selection.slice(0, 500) });
 
-  // Fetch in the extension host; the webview only renders. Selected text only —
-  // no files are read or edited, no commands run.
+  // The brain runs in the extension host — no server. The webview only renders.
+  // Selected text only — no files are read or edited, no commands run.
   try {
-    const res = await fetch(`${localAppUrl}/api/community-help`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ user_message: message, mode }),
-    });
-    p.webview.postMessage({ type: "result", data: await res.json() });
+    const request: CommunityHelpRequest = { userMessage: message, mode: mode as CommunityHelpRequest["mode"] };
+    const data = await communityHelp(request, mockWorkspaceContext, adapters);
+    p.webview.postMessage({ type: "result", data });
   } catch (error) {
-    p.webview.postMessage({ type: "error", message: error instanceof Error ? error.message : String(error), url: localAppUrl });
+    p.webview.postMessage({ type: "error", message: error instanceof Error ? error.message : String(error), url: "in-extension" });
   }
 }
 

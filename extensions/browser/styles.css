@@ -451,3 +451,23 @@ body::after {
 .followup .q { filter: drop-shadow(0 0 8px #4cc2ff); }
 .act:hover { border-color: rgba(125,136,200,.5); box-shadow: 0 8px 22px rgba(125,136,200,.18); }
 .toast { box-shadow: 0 10px 30px rgba(76,194,255,.40); }
+
+/* ============================================================
+   v5 — dynamic source rail (sections = your connected sources)
+   ============================================================ */
+.navwrap { transform: translateZ(40px); }
+.tabs.dyn { overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none; }
+.tabs.dyn::-webkit-scrollbar { display: none; }
+.tabs.dyn .tab { flex: 0 0 auto; padding: 9px 13px; }
+
+.srchead { display: flex; align-items: center; gap: 10px; }
+.srchead .sdot { width: 12px; height: 12px; border-radius: 50%; box-shadow: 0 0 12px currentColor; flex: none; }
+.srchead .sname { font-size: 15px; font-weight: 800; }
+.srchead .sreach { margin-left: auto; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--faint); }
+.caps { display: flex; flex-wrap: wrap; gap: 6px; }
+.cap { font-size: 10px; letter-spacing: .3px; padding: 4px 9px; border-radius: 999px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.10); color: var(--muted); }
+.cap.on { color: #06121a; background: var(--lime); border-color: transparent; }
+.cap.warn { color: #1a0f06; background: var(--amber); border-color: transparent; }
+.cap.off { opacity: .55; }
+.addrow { display: flex; flex-wrap: wrap; gap: 7px; }
+.addchip { font-size: 11px; padding: 5px 11px; border-radius: 999px; border: 1px dashed rgba(255,255,255,.18); color: var(--faint); background: transparent; }
