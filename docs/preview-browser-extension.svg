@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="560" viewBox="0 0 900 560" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif">
+  <style>
+    .bg{fill:#0b1020}
+    .label{fill:#9aa4b2;font-size:13px}
+    .chrome{fill:#1b2233}
+    .dot{}
+    .panel{fill:#ffffff}
+    .h1{fill:#11151c;font-weight:700}
+    .btn{fill:#f1f3f7;stroke:#c9d0db;stroke-width:1}
+    .btntxt{fill:#11151c;font-size:13px}
+    .small{fill:#6b7280;font-size:11px}
+    .ta{fill:#fbfcfe;stroke:#c9d0db;stroke-width:1}
+    .phold{fill:#9aa4b2;font-size:12.5px}
+    .askbtn{fill:#2f6df6}
+    .askbtntxt{fill:#ffffff;font-size:13px;font-weight:600}
+    .pre{fill:#0f1626}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10.5px}
+    .k{fill:#7fd1ff}
+    .s{fill:#a6e3a1}
+    .n{fill:#f9c784}
+    .p{fill:#c7ccd6}
+  </style>
+
+  <rect class="bg" x="0" y="0" width="900" height="560"/>
+  <text class="label" x="40" y="34">Browser extension · toolbar popup</text>
+  <text class="label" x="520" y="34">Browser extension · side panel</text>
+
+  <!-- ===================== POPUP ===================== -->
+  <g transform="translate(40,50)">
+    <rect class="chrome" x="0" y="0" width="300" height="26" rx="6"/>
+    <circle cx="16" cy="13" r="4" fill="#ff5f57"/><circle cx="30" cy="13" r="4" fill="#febc2e"/><circle cx="44" cy="13" r="4" fill="#28c840"/>
+    <text class="label" x="150" y="17" text-anchor="middle" font-size="11">Help Me</text>
+    <rect class="panel" x="0" y="26" width="300" height="250"/>
+    <text class="h1" x="16" y="58" font-size="20">Help Me</text>
+
+    <rect class="btn" x="16" y="76" width="268" height="34" rx="6"/>
+    <text class="btntxt" x="150" y="98" text-anchor="middle">Ask about selected text</text>
+    <rect class="btn" x="16" y="118" width="268" height="34" rx="6"/>
+    <text class="btntxt" x="150" y="140" text-anchor="middle">Ask about visible page</text>
+    <rect class="btn" x="16" y="160" width="268" height="34" rx="6"/>
+    <text class="btntxt" x="150" y="182" text-anchor="middle">Open side panel</text>
+
+    <text class="small" x="16" y="222">No public posting or form submission</text>
+    <text class="small" x="16" y="238">happens automatically.</text>
+  </g>
+
+  <!-- ===================== SIDE PANEL ===================== -->
+  <g transform="translate(520,50)">
+    <rect class="chrome" x="0" y="0" width="340" height="26" rx="6"/>
+    <text class="label" x="170" y="17" text-anchor="middle" font-size="11">Help Me Comms — side panel</text>
+    <rect class="panel" x="0" y="26" width="340" height="474"/>
+    <text class="h1" x="16" y="58" font-size="18">Help Me Comms</text>
+
+    <!-- textarea -->
+    <rect class="ta" x="16" y="72" width="308" height="74" rx="6"/>
+    <text class="phold" x="26" y="92">I'm crashing at the factory boss intro.</text>
+    <text class="phold" x="26" y="110">What do I do?</text>
+
+    <!-- ask button -->
+    <rect class="askbtn" x="16" y="156" width="120" height="32" rx="6"/>
+    <text class="askbtntxt" x="76" y="177" text-anchor="middle">Ask Help Me</text>
+
+    <!-- result pre -->
+    <rect class="pre" x="16" y="200" width="308" height="284" rx="6"/>
+    <text class="mono" x="28" y="222"><tspan class="p">{</tspan></text>
+    <text class="mono" x="28" y="238"><tspan class="k">  "status"</tspan><tspan class="p">: </tspan><tspan class="s">"needs_followup"</tspan><tspan class="p">,</tspan></text>
+    <text class="mono" x="28" y="254"><tspan class="k">  "intent"</tspan><tspan class="p">: </tspan><tspan class="s">"crash_support"</tspan><tspan class="p">,</tspan></text>
+    <text class="mono" x="28" y="270"><tspan class="k">  "confidence"</tspan><tspan class="p">: </tspan><tspan class="n">0.63</tspan><tspan class="p">,</tspan></text>
+    <text class="mono" x="28" y="286"><tspan class="k">  "answer"</tspan><tspan class="p">: </tspan><tspan class="s">"This looks like a</tspan></text>
+    <text class="mono" x="28" y="300"><tspan class="s">    crash-support issue. Start with</tspan></text>
+    <text class="mono" x="28" y="314"><tspan class="s">    these steps: 1. Several users…"</tspan><tspan class="p">,</tspan></text>
+    <text class="mono" x="28" y="330"><tspan class="k">  "sourcesUsed"</tspan><tspan class="p">: [</tspan><tspan class="s">"discord"</tspan><tspan class="p">,</tspan></text>
+    <text class="mono" x="28" y="344"><tspan class="s">    "reddit"</tspan><tspan class="p">, </tspan><tspan class="s">"steam_reviews"</tspan><tspan class="p">,</tspan></text>
+    <text class="mono" x="28" y="358"><tspan class="s">    "forum"</tspan><tspan class="p">],</tspan></text>
+    <text class="mono" x="28" y="374"><tspan class="k">  "followupQuestion"</tspan><tspan class="p">: </tspan><tspan class="s">"What</tspan></text>
+    <text class="mono" x="28" y="388"><tspan class="s">    platform, version, and recent</tspan></text>
+    <text class="mono" x="28" y="402"><tspan class="s">    changes are involved?"</tspan><tspan class="p">,</tspan></text>
+    <text class="mono" x="28" y="418"><tspan class="k">  "suggestedActions"</tspan><tspan class="p">: [</tspan></text>
+    <text class="mono" x="28" y="432"><tspan class="s">    "draft_faq"</tspan><tspan class="p">, </tspan><tspan class="s">"draft_reply"</tspan><tspan class="p">],</tspan></text>
+    <text class="mono" x="28" y="448"><tspan class="k">  "privacyNotice"</tspan><tspan class="p">: </tspan><tspan class="s">"Scoped</tspan></text>
+    <text class="mono" x="28" y="462"><tspan class="s">    evidence… discarded after task."</tspan></text>
+    <text class="mono" x="28" y="476"><tspan class="p">}</tspan></text>
+  </g>
+</svg>
