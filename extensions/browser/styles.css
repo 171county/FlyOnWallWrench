@@ -405,3 +405,49 @@ body::after {
 /* punchier title + accent section labels */
 .title { filter: drop-shadow(0 2px 18px rgba(139,92,255,.65)) drop-shadow(0 0 30px rgba(56,232,255,.28)); }
 .section-label { color: color-mix(in srgb, var(--tab-accent, #9aa6c4) 55%, #9aa6c4); }
+
+/* ============================================================
+   v4 palette — game-dev gunmetal + steel/slate/amber, subtle
+   terminal-green accent (hacker). Drops the bright purple/pink.
+   ============================================================ */
+:root {
+  --bg:      #070a11;          /* gunmetal */
+  --cyan:    #4cc2ff;          /* steel cyan */
+  --violet:  #7d88c8;          /* slate blue (was candy violet) */
+  --magenta: #e0964a;          /* warm amber (was pink) */
+  --lime:    #2ee06a;          /* electric terminal green — used sparingly */
+  --amber:   #e8b25a;
+  --grad:      linear-gradient(135deg, #4cc2ff 0%, #6f7bbf 52%, #e0964a 100%);
+  --grad-soft: linear-gradient(135deg, rgba(76,194,255,.20), rgba(111,123,191,.20) 50%, rgba(224,150,74,.18));
+}
+
+/* aurora scrim: cool steel wash instead of pink */
+body::after {
+  background:
+    radial-gradient(120% 80% at 50% -10%, rgba(76,194,255,.14), transparent 60%),
+    linear-gradient(180deg, rgba(7,10,17,.16), rgba(7,10,17,.62));
+}
+
+/* living edge ring — steel → slate → amber → a single green arc */
+.card.lux::before {
+  background: conic-gradient(from var(--a),
+    rgba(76,194,255,0) 0deg, #4cc2ff 42deg, #7d88c8 112deg, rgba(125,136,200,0) 165deg,
+    rgba(224,150,74,0) 205deg, #e0964a 255deg, #2ee06a 325deg, rgba(46,224,106,0) 360deg);
+  opacity: .5;
+}
+
+/* confidence meter: warm low-end → electric green high-end (the hacker tell) */
+.meter > i { background: linear-gradient(90deg, #ff7a3c, #e8b25a 48%, #2ee06a); box-shadow: 0 0 18px rgba(46,224,106,.6); }
+.meter > i::after { background: #eafff2; box-shadow: 0 0 10px #2ee06a, 0 0 22px #2ee06a; }
+
+/* green = "good signal" cues, kept small */
+.chip.status.ok { background: #2ee06a; box-shadow: 0 0 16px rgba(46,224,106,.40); }
+.trust .dot, .privacy .dot { background: #2ee06a; box-shadow: 0 0 10px #2ee06a; }
+
+/* de-pink the interactive bits */
+.primary { box-shadow: 0 10px 26px rgba(111,123,191,.40), inset 0 1px 0 rgba(255,255,255,.5); }
+.primary:hover { box-shadow: 0 16px 36px rgba(76,194,255,.42); }
+.followup { background: rgba(76,194,255,.07); border-color: rgba(76,194,255,.22); }
+.followup .q { filter: drop-shadow(0 0 8px #4cc2ff); }
+.act:hover { border-color: rgba(125,136,200,.5); box-shadow: 0 8px 22px rgba(125,136,200,.18); }
+.toast { box-shadow: 0 10px 30px rgba(76,194,255,.40); }

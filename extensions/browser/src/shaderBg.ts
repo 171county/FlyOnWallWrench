@@ -43,18 +43,19 @@ void main() {
                 fbm(p + 1.5 * q + vec2(8.3, 2.8) - 0.5 * t));
   float f = fbm(p + 1.6 * r);
 
-  vec3 deep    = vec3(0.025, 0.035, 0.075);
-  vec3 cyan    = vec3(0.22, 0.91, 1.00);
-  vec3 violet  = vec3(0.55, 0.36, 1.00);
-  vec3 magenta = vec3(1.00, 0.30, 0.62);
+  vec3 deep  = vec3(0.020, 0.028, 0.045);  // gunmetal
+  vec3 steel = vec3(0.30, 0.70, 1.00);     // steel cyan
+  vec3 slate = vec3(0.40, 0.46, 0.70);     // slate blue
+  vec3 amber = vec3(0.85, 0.55, 0.28);     // warm metal
 
-  vec3 col = mix(deep, violet, clamp(f * 1.35, 0.0, 1.0));
-  col = mix(col, cyan,    clamp(length(r) * 0.65, 0.0, 1.0));
-  col = mix(col, magenta, clamp(q.x * q.y * 1.7, 0.0, 1.0));
-  col += cyan * pow(f, 3.0) * 0.55;                 // luminous cores
-  col *= smoothstep(1.25, 0.30, length(uv - 0.5)); // vignette
-  col = mix(col * 0.5, col, 0.78);                  // keep it deep for contrast
-  col += (hash(uv * (u_time + 1.0)) - 0.5) * 0.025; // film grain
+  vec3 col = mix(deep, slate, clamp(f * 1.30, 0.0, 1.0));
+  col = mix(col, steel, clamp(length(r) * 0.60, 0.0, 1.0));
+  col = mix(col, amber, clamp(q.x * q.y * 1.10, 0.0, 1.0));   // subtle warmth
+  col += steel * pow(f, 3.0) * 0.45;                          // cool cores
+  col += vec3(0.16, 1.0, 0.50) * pow(f, 5.0) * 0.16;          // whisper of terminal green
+  col *= smoothstep(1.25, 0.30, length(uv - 0.5));            // vignette
+  col = mix(col * 0.5, col, 0.76);                            // keep it deep for contrast
+  col += (hash(uv * (u_time + 1.0)) - 0.5) * 0.022;           // film grain
 
   gl_FragColor = vec4(col, 1.0);
 }

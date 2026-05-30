@@ -31,7 +31,7 @@ const SOURCE_META: Record<string, { label: string; color: string }> = {
   reddit: { label: "Reddit", color: "#ff4500" },
   steam_reviews: { label: "Steam", color: "#66c0f4" },
   steam_news: { label: "Steam News", color: "#66c0f4" },
-  forum: { label: "Forum", color: "#b6ff5a" },
+  forum: { label: "Forum", color: "#2ee06a" },
   github_discussions: { label: "GitHub", color: "#c9d1d9" },
   github_issues: { label: "GitHub Issues", color: "#c9d1d9" },
   youtube: { label: "YouTube", color: "#ff4d9d" },
@@ -61,7 +61,7 @@ function setTab(name: string) {
   const btn = tabButtons.find((b) => b.dataset.tab === name);
   if (!btn) return;
   tabButtons.forEach((b) => b.setAttribute("aria-selected", String(b === btn)));
-  tabs.style.setProperty("--tab-accent", btn.dataset.accent ?? "#38e8ff");
+  tabs.style.setProperty("--tab-accent", btn.dataset.accent ?? "#4cc2ff");
   moveIndicator(btn);
   document.querySelectorAll<HTMLElement>(".view").forEach((v) => {
     v.classList.toggle("active", v.id === `view-${name}`);
