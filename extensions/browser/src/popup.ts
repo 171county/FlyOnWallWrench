@@ -1,3 +1,7 @@
+import { initShaderBackground } from "./shaderBg.js";
+
+initShaderBackground("bg");
+
 async function getActiveTab() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   return tab;
@@ -20,14 +24,32 @@ async function collectPageContext() {
   return result;
 }
 
+function toast(message: string) {
+  const t = document.getElementById("toast");
+  if (!t) return;
+  t.textContent = message;
+  t.classList.add("show");
+  window.setTimeout(() => t.classList.remove("show"), 2600);
+}
+
 document.getElementById("ask-selection")?.addEventListener("click", async () => {
-  const context = await collectPageContext();
-  await chrome.storage.session.set({ helpMeDraftContext: { ...context, mode: "selection" } });
+  try {
+    const context = await collectPageContext();
+    await chrome.storage.session.set({ helpMeDraftContext: { ...context, mode: "selection" } });
+    toast(context?.selection ? "Selection captured ✦" : "No selection — grabbed visible page");
+  } catch {
+    toast("Couldn't read this page");
+  }
 });
 
 document.getElementById("ask-page")?.addEventListener("click", async () => {
-  const context = await collectPageContext();
-  await chrome.storage.session.set({ helpMeDraftContext: { ...context, mode: "visible_page" } });
+  try {
+    const context = await collectPageContext();
+    await chrome.storage.session.set({ helpMeDraftContext: { ...context, mode: "visible_page" } });
+    toast("Visible page captured ✦");
+  } catch {
+    toast("Couldn't read this page");
+  }
 });
 
 document.getElementById("open-sidepanel")?.addEventListener("click", async () => {

@@ -1,20 +1,32 @@
 <!doctype html>
-<html>
+<html lang="en">
   <head>
     <meta charset="utf-8" />
+    <meta name="color-scheme" content="dark" />
     <title>Help Me Comms</title>
-    <style>
-      body { font-family: system-ui, sans-serif; padding: 12px; }
-      textarea { width: 100%; min-height: 120px; }
-      button { margin-top: 8px; }
-      pre { white-space: pre-wrap; }
-    </style>
+    <link rel="stylesheet" href="styles.css" />
   </head>
-  <body>
-    <h1>Help Me Comms</h1>
-    <textarea id="question" placeholder="Ask about this page or paste a community issue..."></textarea>
-    <button id="ask">Ask Help Me</button>
-    <pre id="result"></pre>
+  <body class="panel">
+    <canvas id="bg"></canvas>
+    <main class="shell">
+      <header class="brand">
+        <div class="logo">&lt;/&gt;</div>
+        <div>
+          <div class="kicker">FlyOnWall &middot; Community Brain</div>
+          <h1 class="title">Help&nbsp;Me&nbsp;Comms</h1>
+        </div>
+      </header>
+
+      <div class="composer glass">
+        <textarea id="question" placeholder="I'm crashing at the factory boss intro. What do I do?"></textarea>
+        <div class="composer-bar">
+          <span class="hint">Reads only what you paste or select</span>
+          <button id="ask" class="primary">Ask Help&nbsp;Me <span class="spark">&#10022;</span></button>
+        </div>
+      </div>
+
+      <section id="result" class="result"></section>
+    </main>
     <script type="module" src="dist/sidepanel.js"></script>
   </body>
 </html>
