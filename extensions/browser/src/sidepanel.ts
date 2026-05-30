@@ -2,7 +2,9 @@ import {
   aggregateConfidence,
   classifyIntent,
   communityHelp,
+  createActionPlan,
   mockWorkspaceContext,
+  queueAction,
   rankEvidence,
   type EvidenceItem,
   type HelpAnswer,
@@ -12,6 +14,7 @@ import {
 import { BaseMockAdapter, createDefaultMockAdapters } from "@help-me-comms/adapters";
 import { initShaderBackground } from "./shaderBg";
 import { initParallax } from "./spatial";
+import { liveFor, recentFor, type FeedMsg } from "./feed";
 
 initShaderBackground("bg");
 initParallax();
@@ -30,8 +33,8 @@ const SOURCE_META: Record<string, { label: string; color: string }> = {
   matrix: { label: "Matrix", color: "#0dbd8b" },
 };
 const meta = (s: string) => SOURCE_META[s] ?? { label: s, color: "#9aa6c4" };
+const SENT: Record<FeedMsg["sentiment"], string> = { pos: "#2ee06a", neu: "#7d88c8", neg: "#ff7a3c", mixed: "#e0964a" };
 
-// The brain runs in-extension — no server. Workspace + adapters are local.
 const workspace = mockWorkspaceContext;
 const allAdapters = createDefaultMockAdapters();
 const adapterFor = (kind: SourceKind) => allAdapters.find((a) => a.kind === kind) ?? new BaseMockAdapter(kind);
@@ -44,7 +47,7 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: 
   return node;
 }
 
-/* ---------------- reusable result pieces ---------------- */
+/* ---------- shared result pieces ---------- */
 function meterEl(value: number): HTMLElement {
   const pct = Math.round(value * 100);
   const wrap = el("div");
@@ -84,86 +87,131 @@ function evidenceEl(items: EvidenceItem[]): HTMLElement {
   }
   return list;
 }
+function answerCard(data: HelpAnswer): HTMLElement {
+  const card = el("div", "card glass lux");
+  const chips = el("div", "chiprow");
+  chips.append(el("span", "chip status" + (data.status === "ok" ? " ok" : ""), (data.status ?? "ok").replace(/_/g, " ")));
+  if (data.intent) chips.append(el("span", "chip", data.intent.replace(/_/g, " ")));
+  card.append(chips);
+  if (data.answer) card.append(el("div", "answer", data.answer));
+  card.append(meterEl(data.confidence ?? 0));
+  if (data.sourcesUsed?.length) { card.append(el("div", "section-label", "Who's seeing it")); card.append(pillsEl(data.sourcesUsed)); }
+  if (data.evidence?.length) { card.append(el("div", "section-label", "Top evidence")); card.append(evidenceEl(data.evidence)); }
+  if (data.followupQuestion) {
+    const fu = el("div", "followup");
+    fu.append(el("span", "q", "✦"), el("span", undefined, data.followupQuestion));
+    card.append(fu);
+  }
+  if (data.privacyNotice) { const pv = el("div", "privacy"); pv.append(el("span", "dot"), el("span", undefined, data.privacyNotice)); card.append(pv); }
+  return card;
+}
 
-/* ---------------- Ask view (auto-scoped across all sources) ---------------- */
+/* ---------- Ask view: correlation + targeted broadcast ---------- */
 function buildAskView(): HTMLElement {
   const view = el("div", "view");
   view.id = "view-ask";
 
   const composer = el("div", "composer glass");
   const ta = el("textarea") as HTMLTextAreaElement;
-  ta.placeholder = "I'm crashing at the factory boss intro. What do I do?";
-  const bar = el("div", "composer-bar");
-  bar.append(el("span", "hint", "Auto-scopes your connected sources"));
-  const btn = el("button", "primary") as HTMLButtonElement;
-  btn.textContent = "Ask Help Me ✦";
-  bar.append(btn);
-  composer.append(ta, bar);
+  ta.placeholder = "Anyone else crashing at the factory boss intro?";
+  composer.append(ta);
+  composer.append(el("div", "section-label", "Send to"));
+  const targets = el("div", "targets");
+  const selected = new Set<SourceKind>(connected.map((s) => s.source));
+  for (const s of connected) {
+    const chip = el("button", "target") as HTMLButtonElement;
+    chip.setAttribute("aria-pressed", "true");
+    chip.style.setProperty("--tc", meta(s.source).color);
+    const led = el("span", "led"); led.style.color = meta(s.source).color;
+    chip.append(led, document.createTextNode(meta(s.source).label));
+    chip.addEventListener("click", () => {
+      const on = chip.getAttribute("aria-pressed") === "true";
+      chip.setAttribute("aria-pressed", String(!on));
+      if (on) selected.delete(s.source); else selected.add(s.source);
+    });
+    targets.append(chip);
+  }
+  composer.append(targets);
+  const bbar = el("div", "bbar");
+  const checkBtn = el("button", "btn2 go") as HTMLButtonElement;
+  checkBtn.textContent = "Check who else ✦";
+  const blastBtn = el("button", "btn2") as HTMLButtonElement;
+  blastBtn.textContent = "Queue broadcast";
+  bbar.append(checkBtn, blastBtn);
+  composer.append(bbar);
 
   const out = el("div", "viewscroll");
   view.append(composer, out);
 
-  btn.addEventListener("click", async () => {
+  const targetList = () => [...selected];
+
+  checkBtn.addEventListener("click", async () => {
     const message = ta.value.trim();
     if (!message) { ta.focus(); return; }
-    btn.disabled = true;
+    const sel = targetList();
+    if (!sel.length) return;
+    checkBtn.disabled = true;
     out.innerHTML = "";
     const loading = el("div", "card glass lux");
     loading.append(el("div", "skel w40"), el("div", "skel w90"), el("div", "skel w70"));
     out.append(loading);
     try {
-      const data: HelpAnswer = await communityHelp(
-        { userMessage: message, sourcePolicy: "auto_scope_connected_sources" },
-        workspace,
-        allAdapters,
-      );
+      const ctx = { ...workspace, connectedSources: workspace.connectedSources.filter((s) => selected.has(s.source)) };
+      const data = await communityHelp({ userMessage: message, mode: "community_manager", sourcePolicy: "use_connected_sources_only" }, ctx, sel.map(adapterFor));
       out.innerHTML = "";
-      const card = el("div", "card glass lux");
-      const chips = el("div", "chiprow");
-      chips.append(el("span", "chip status" + (data.status === "ok" ? " ok" : ""), (data.status ?? "ok").replace(/_/g, " ")));
-      if (data.intent) chips.append(el("span", "chip", data.intent.replace(/_/g, " ")));
-      card.append(chips);
-      if (data.answer) card.append(el("div", "answer", data.answer));
-      card.append(meterEl(data.confidence ?? 0));
-      if (data.sourcesUsed?.length) { card.append(el("div", "section-label", "Sources scoped")); card.append(pillsEl(data.sourcesUsed)); }
-      if (data.evidence?.length) { card.append(el("div", "section-label", "Top evidence")); card.append(evidenceEl(data.evidence)); }
-      if (data.followupQuestion) {
-        const fu = el("div", "followup");
-        fu.append(el("span", "q", "✦"), el("span", undefined, data.followupQuestion));
-        card.append(fu);
-      }
-      if (data.suggestedActions?.length) {
-        card.append(el("div", "section-label", "Suggested next actions"));
-        const acts = el("div", "acts");
-        for (const a of data.suggestedActions) {
-          const b = el("button", "act");
-          b.append(el("span", "glyph", "✎"), el("span", undefined, a.label));
-          if (a.requiresApproval) b.append(el("span", "gate", "Approval"));
-          acts.append(b);
-        }
-        card.append(acts);
-      }
-      if (data.privacyNotice) { const pv = el("div", "privacy"); pv.append(el("span", "dot"), el("span", undefined, data.privacyNotice)); card.append(pv); }
-      out.append(card);
+      out.append(answerCard(data));
     } finally {
-      btn.disabled = false;
+      checkBtn.disabled = false;
     }
+  });
+
+  blastBtn.addEventListener("click", () => {
+    const message = ta.value.trim();
+    if (!message) { ta.focus(); return; }
+    const sel = targetList();
+    if (!sel.length) return;
+    out.innerHTML = "";
+    const card = el("div", "card glass lux");
+    card.append(el("div", "section-label", `Queued to ${sel.length} target${sel.length === 1 ? "" : "s"} — nothing posts until you approve`));
+    const list = el("div", "queued");
+    for (const kind of sel) {
+      const plan = queueAction(createActionPlan({ actionType: "poll", draft: message, targetRef: kind, allowedClient: "web_app" }));
+      const row = el("div", "qrow");
+      const led = el("span", "qled"); led.style.color = meta(kind).color;
+      row.append(led, el("span", undefined, `Poll → ${meta(kind).label}`), el("span", "qstate", plan.approvalRequired ? "Approval" : plan.status));
+      list.append(row);
+    }
+    card.append(list);
+    const pv = el("div", "privacy"); pv.append(el("span", "dot"), el("span", undefined, "Drafts are queued locally. Approve each in the client to post.")); card.append(pv);
+    out.append(card);
   });
 
   return view;
 }
 
-/* ---------------- per-source view (focused on one source) ---------------- */
-function capChips(cap: SourceCapabilities): HTMLElement {
-  const caps = el("div", "caps");
-  caps.append(el("span", "cap on", "read"));
-  const writeCls = cap.write === "disabled" ? "cap off" : cap.write === "enabled" ? "cap on" : "cap warn";
-  caps.append(el("span", writeCls, `write: ${cap.write.replace(/_/g, " ")}`));
-  if (cap.supportsThreads) caps.append(el("span", "cap", "threads"));
-  if (cap.supportsSearch) caps.append(el("span", "cap", "search"));
-  if (cap.supportsRealtime) caps.append(el("span", "cap", "realtime"));
-  if (cap.supportsPrivateSpaces) caps.append(el("span", "cap", "private spaces"));
-  return caps;
+/* ---------- per-source view: LIVE feed ---------- */
+const feedEls: Record<string, HTMLElement> = {};
+
+function renderMsg(m: FeedMsg, kind: string, live = false): HTMLElement {
+  const row = el("div", live ? "msg in" : "msg");
+  const av = el("div", "av", m.author.charAt(0).toUpperCase());
+  av.style.background = meta(kind).color;
+  const mb = el("div", "mb");
+  const mh = el("div", "mh");
+  const sd = el("span", "sdot"); sd.style.background = SENT[m.sentiment];
+  mh.append(sd, el("span", "mn", m.author), el("span", "role", m.role), el("span", "mt", m.ago));
+  mb.append(mh, el("div", "mtext", m.body));
+  const react = el("div", "react");
+  let up = m.up;
+  const upBtn = el("button", "rbtn", `▲ ${up}`) as HTMLButtonElement;
+  const meBtn = el("button", "rbtn", "+ me too") as HTMLButtonElement;
+  meBtn.addEventListener("click", () => { if (meBtn.classList.contains("done")) return; up += 1; upBtn.textContent = `▲ ${up}`; meBtn.className = "rbtn done"; meBtn.textContent = "✓ me too"; });
+  const replyBtn = el("button", "rbtn", "Draft reply") as HTMLButtonElement;
+  replyBtn.addEventListener("click", () => { if (replyBtn.classList.contains("queued")) return; queueAction(createActionPlan({ actionType: "reply", draft: "(reply draft)", targetRef: kind, allowedClient: "web_app" })); replyBtn.className = "rbtn queued"; replyBtn.textContent = "Queued · approval"; });
+  react.append(upBtn, meBtn, replyBtn);
+  mb.append(react);
+  row.append(av, mb);
+  return row;
 }
 
 function buildSourceView(cap: SourceCapabilities): HTMLElement {
@@ -176,58 +224,32 @@ function buildSourceView(cap: SourceCapabilities): HTMLElement {
   const hr = el("div", "srchead");
   const dot = el("span", "sdot"); dot.style.color = m.color;
   hr.append(dot, el("span", "sname", m.label), el("span", "sreach", cap.write === "disabled" ? "read-only" : "approval-gated"));
-  head.append(hr, capChips(cap));
+  head.append(hr);
+  const caps = el("div", "caps");
+  caps.append(el("span", "cap on", "read"));
+  caps.append(el("span", cap.write === "disabled" ? "cap off" : "cap warn", `write: ${cap.write.replace(/_/g, " ")}`));
+  if (cap.supportsRealtime) caps.append(el("span", "cap", "realtime"));
+  if (cap.supportsThreads) caps.append(el("span", "cap", "threads"));
+  head.append(caps);
   if (cap.approvedSpaces?.length) {
-    head.append(el("div", "section-label", "Approved spaces"));
-    head.append(pillsEl([])); // placeholder removed below
-    head.lastChild?.remove();
     const spaces = el("div", "pills");
     for (const s of cap.approvedSpaces) spaces.append(el("span", "pill", "#" + s));
     head.append(spaces);
   }
 
-  const composer = el("div", "composer glass");
-  const ta = el("textarea") as HTMLTextAreaElement;
-  ta.placeholder = `Search ${m.label} for a crash, bottleneck, or topic…`;
-  const bar = el("div", "composer-bar");
-  bar.append(el("span", "hint", `Scoped to ${m.label} only`));
-  const btn = el("button", "primary") as HTMLButtonElement;
-  btn.textContent = `Search ${m.label} ✦`;
-  bar.append(btn);
-  composer.append(ta, bar);
+  const fhead = el("div", "feedhead");
+  const live = el("span", "live"); live.append(el("span", "pulse"), document.createTextNode("Live"));
+  fhead.append(el("span", "section-label", `${m.label} community feed`), live);
 
-  const out = el("div", "viewscroll");
-  view.append(head, composer, out);
+  const feed = el("div", "feed");
+  for (const msg of recentFor(kind)) feed.append(renderMsg(msg, kind));
+  feedEls[kind] = feed;
 
-  btn.addEventListener("click", async () => {
-    const message = ta.value.trim();
-    if (!message) { ta.focus(); return; }
-    btn.disabled = true;
-    out.innerHTML = "";
-    try {
-      const intent = classifyIntent(message);
-      const evidence = rankEvidence(await adapterFor(kind).search({ query: message, intent, timeWindow: "14d", maxEvidence: 10 }, workspace));
-      const confidence = aggregateConfidence(evidence);
-      const card = el("div", "card glass lux");
-      const chips = el("div", "chiprow");
-      chips.append(el("span", "chip", intent.replace(/_/g, " ")));
-      card.append(chips);
-      card.append(el("div", "answer", evidence.length
-        ? `Top ${m.label} signal: ${evidence[0].summary}`
-        : `No recent ${m.label} signal for that yet — try broader wording.`));
-      card.append(meterEl(confidence));
-      if (evidence.length) { card.append(el("div", "section-label", `${m.label} evidence`)); card.append(evidenceEl(evidence)); }
-      const pv = el("div", "privacy"); pv.append(el("span", "dot"), el("span", undefined, "Evidence is scoped and discarded after the task.")); card.append(pv);
-      out.append(card);
-    } finally {
-      btn.disabled = false;
-    }
-  });
-
+  view.append(head, fhead, feed);
   return view;
 }
 
-/* ---------------- nav (sections = Ask + your connected sources) ---------------- */
+/* ---------- nav (Ask + connected sources) ---------- */
 const nav = document.getElementById("nav") as HTMLElement;
 const indicator = document.getElementById("ind") as HTMLElement;
 const views = document.getElementById("views") as HTMLElement;
@@ -251,6 +273,7 @@ const navButtons: HTMLButtonElement[] = navItems.map((item) => {
   return b;
 });
 
+let activeFeedKind: string | null = null;
 function setActive(id: string) {
   const btn = navButtons.find((b) => b.dataset.tab === id);
   if (!btn) return;
@@ -260,7 +283,17 @@ function setActive(id: string) {
   indicator.style.width = `${btn.offsetWidth}px`;
   btn.scrollIntoView({ inline: "nearest", block: "nearest", behavior: "smooth" });
   views.querySelectorAll<HTMLElement>(".view").forEach((v) => v.classList.toggle("active", v.id === `view-${id}`));
+  activeFeedKind = id !== "ask" && feedEls[id] ? id : null;
 }
+
+// single live trickle — only the visible source feed grows, twitch-chat style
+window.setInterval(() => {
+  if (!activeFeedKind) return;
+  const feed = feedEls[activeFeedKind];
+  if (!feed) return;
+  feed.prepend(renderMsg(liveFor(activeFeedKind), activeFeedKind, true));
+  while (feed.childElementCount > 14) feed.lastElementChild?.remove();
+}, 4500);
 
 requestAnimationFrame(() => setActive("ask"));
 window.addEventListener("resize", () => {

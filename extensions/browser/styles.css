@@ -471,3 +471,41 @@ body::after {
 .cap.off { opacity: .55; }
 .addrow { display: flex; flex-wrap: wrap; gap: 7px; }
 .addchip { font-size: 11px; padding: 5px 11px; border-radius: 999px; border: 1px dashed rgba(255,255,255,.18); color: var(--faint); background: transparent; }
+
+/* ============================================================
+   v6 — live feed (twitch-chat-ish) + targeted broadcast
+   ============================================================ */
+.live { display: inline-flex; align-items: center; gap: 6px; font-size: 10px; letter-spacing: 1.6px; text-transform: uppercase; color: var(--lime); font-weight: 700; }
+.live .pulse { width: 7px; height: 7px; border-radius: 50%; background: var(--lime); box-shadow: 0 0 10px var(--lime); animation: pulse 1.4s ease-in-out infinite; }
+.feedhead { display: flex; align-items: center; justify-content: space-between; }
+.feed { display: flex; flex-direction: column; gap: 8px; }
+.msg { display: flex; gap: 10px; padding: 9px 11px; border-radius: 12px; background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.07); }
+.msg.in { animation: slidein .42s cubic-bezier(.2,.8,.2,1); }
+@keyframes slidein { from { opacity: 0; transform: translateY(-10px); } }
+.msg .av { width: 28px; height: 28px; border-radius: 9px; flex: none; display: grid; place-items: center; font-size: 12px; font-weight: 800; color: #06121a; }
+.msg .mb { flex: 1; min-width: 0; }
+.msg .mh { display: flex; align-items: center; gap: 7px; }
+.msg .mn { font-size: 12px; font-weight: 700; color: #dbe3ee; }
+.msg .role { font-size: 9px; letter-spacing: .5px; text-transform: uppercase; color: var(--faint); border: 1px solid rgba(255,255,255,.12); padding: 1px 6px; border-radius: 999px; }
+.msg .sdot { width: 7px; height: 7px; border-radius: 50%; }
+.msg .mt { margin-left: auto; font-size: 10px; color: var(--faint); white-space: nowrap; }
+.msg .mtext { font-size: 12.5px; color: #cfd8e8; line-height: 1.45; margin-top: 3px; word-wrap: break-word; }
+.msg .react { margin-top: 7px; display: flex; gap: 6px; align-items: center; }
+.rbtn { font-size: 10.5px; color: var(--muted); background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.10); border-radius: 999px; padding: 3px 9px; cursor: pointer; transition: border-color .2s, color .2s; }
+.rbtn:hover { border-color: rgba(76,194,255,.5); color: var(--steel); }
+.rbtn.done { color: #06150d; background: var(--lime); border-color: transparent; }
+.rbtn.queued { color: #1a0f06; background: var(--amber); border-color: transparent; }
+
+/* targeted broadcast */
+.targets { display: flex; flex-wrap: wrap; gap: 7px; }
+.target { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; padding: 6px 11px; border-radius: 999px; cursor: pointer; user-select: none; color: var(--muted); background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.10); transition: all .18s; }
+.target .led { width: 8px; height: 8px; border-radius: 50%; box-shadow: 0 0 8px currentColor; }
+.target[aria-pressed="true"] { color: #eaf2ff; border-color: color-mix(in srgb, var(--tc, #4cc2ff) 60%, transparent); background: color-mix(in srgb, var(--tc, #4cc2ff) 13%, transparent); box-shadow: 0 0 16px -6px var(--tc, #4cc2ff); }
+.bbar { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn2 { border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.05); color: var(--ink); border-radius: 12px; padding: 10px 15px; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; transition: border-color .2s, box-shadow .2s, transform .15s; }
+.btn2:hover { border-color: rgba(76,194,255,.5); box-shadow: 0 8px 22px -8px rgba(76,194,255,.5); transform: translateY(-1px); }
+.btn2.go { border-color: transparent; background: var(--grad); color: #06121a; }
+.queued { display: flex; flex-direction: column; gap: 8px; }
+.qrow { display: flex; align-items: center; gap: 9px; padding: 9px 11px; border-radius: 11px; background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.08); font-size: 12.5px; color: #dbe3ee; }
+.qrow .qled { width: 8px; height: 8px; border-radius: 50%; box-shadow: 0 0 8px currentColor; }
+.qrow .qstate { margin-left: auto; font-size: 9.5px; letter-spacing: 1px; text-transform: uppercase; color: var(--amber); border: 1px solid rgba(224,150,74,.4); padding: 3px 7px; border-radius: 999px; }
