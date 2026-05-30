@@ -6,6 +6,7 @@ import {
   mockWorkspaceContext,
   rankEvidence,
   type DraftKind,
+  type DraftTone,
   type EvidenceItem,
   type HelpAnswer,
   type SourceCapabilities,
@@ -16,8 +17,9 @@ import { initShaderBackground } from "./shaderBg";
 import { initParallax } from "./spatial";
 import { liveFor, recentFor, type FeedMsg } from "./feed";
 import { addSignal, localConfirmations } from "./signals";
-import { clearResolved, enqueue, hydrate as hydrateQueue, list as queueList, onChange as onQueueChange, pendingCount, remove as removeQueued, setStatus, updateBody, type QueueItem } from "./queue";
+import { applyEdit, clearResolved, enqueue, hydrate as hydrateQueue, list as queueList, onChange as onQueueChange, pendingCount, remove as removeQueued, setStatus, updateBody, type QueueItem } from "./queue";
 import { getLastTab, getTargets, hydratePrefs, setLastTab, setTargets } from "./prefs";
+import { getSettings, hydrateSettings, onSettingsChange, setSettings } from "./settings";
 import { addCustom, hydrateCustom, listCustom, onCustomChange, removeCustom, type CustomKind, type CustomSource } from "./customSources";
 import { CustomSourceAdapter } from "@help-me-comms/adapters";
 
@@ -202,7 +204,7 @@ function buildAskView(): HTMLElement {
     for (const kind of sel) {
       // authentic per-platform poll draft, sent to the real approval queue
       const draft = composeDraft({ kind: "poll", source: kind, topic: message, intent });
-      enqueue({ actionType: draft.actionType, source: kind, title: draft.title, body: draft.body });
+      enqueue({ actionType: draft.actionType, source: kind, title: draft.title, body: draft.body, tone: "auto", recompose: { kind: "poll", topic: message, intent } });
       const row = el("div", "qrow");
       const led = el("span", "qled"); led.style.color = meta(kind).color;
       row.append(led, el("span", undefined, `Poll → ${meta(kind).label}`), el("span", "qstate", "Approval"));
@@ -252,7 +254,7 @@ function renderMsg(m: FeedMsg, kind: string, live = false, showSource = false): 
       intent: classifyIntent(m.body),
       evidence: [{ id: m.author, source: kind as SourceKind, title: m.author, summary: m.body, matchedTerms: [], confidenceSignals: { semanticMatch: 0.6, exactTermMatch: 0.5, recency: 0.9, sourceTrust: 0.6, confirmationCount: m.up, sameVersionBonus: 0, resolvedBonus: 0, duplicatePenalty: 0, lowQualityPenalty: 0 }, redacted: true }],
     });
-    enqueue({ actionType: draft.actionType, source: kind, title: draft.title, body: draft.body });
+    enqueue({ actionType: draft.actionType, source: kind, title: draft.title, body: draft.body, tone: "auto", recompose: { kind: "reply", topic: m.body, intent: classifyIntent(m.body) } });
     replyBtn.className = "rbtn queued"; replyBtn.textContent = "Queued · approval";
   });
   react.append(upBtn, meBtn, replyBtn);
@@ -361,6 +363,25 @@ function renderDraftCard(container: HTMLElement, item: QueueItem) {
   body.disabled = item.status !== "queued";
   body.addEventListener("input", () => updateBody(item.id, body.value));
   card.append(body);
+
+  // tone picker — recomposes the draft body in a different voice
+  if (item.status === "queued" && item.recompose) {
+    const tr = el("div", "tonerow");
+    tr.append(el("span", "tonelabel", "Tone"));
+    const sel = el("select", "toneselect") as HTMLSelectElement;
+    for (const [v, label] of [["auto", "Native voice"], ["friendly", "Friendly"], ["official", "Official"], ["technical", "Technical"], ["casual", "Casual"]]) {
+      const o = el("option") as HTMLOptionElement; o.value = v; o.textContent = label;
+      if ((item.tone ?? "auto") === v) o.selected = true;
+      sel.append(o);
+    }
+    sel.addEventListener("change", () => {
+      const rc = item.recompose!;
+      const d = composeDraft({ kind: rc.kind as DraftKind, source: item.source as SourceKind, topic: rc.topic, intent: rc.intent as ReturnType<typeof classifyIntent>, tone: sel.value as DraftTone });
+      applyEdit(item.id, { body: d.body, tone: sel.value });
+    });
+    tr.append(sel);
+    card.append(tr);
+  }
 
   if (item.status === "queued") {
     const actions = el("div", "dactions");
@@ -503,6 +524,57 @@ function buildAddView(): HTMLElement {
 let navItems: NavItem[] = [];
 let navButtons: HTMLButtonElement[] = [];
 
+// ---------- Settings tab ----------
+function buildSettingsView(): HTMLElement {
+  const view = el("div", "view");
+  view.id = "view-settings";
+  const card = el("div", "addform card glass");
+  card.append(el("div", "section-label", "Settings"));
+
+  const s = getSettings();
+
+  // live trickle toggle
+  const trickWrap = el("div", "setrow");
+  const trickLabel = el("label", undefined, "Live feed trickle");
+  const trick = el("select", "toneselect") as HTMLSelectElement;
+  for (const [v, label] of [["on", "On"], ["off", "Off"]]) {
+    const o = el("option") as HTMLOptionElement; o.value = v; o.textContent = label;
+    if ((s.trickle ? "on" : "off") === v) o.selected = true;
+    trick.append(o);
+  }
+  trick.addEventListener("change", () => setSettings({ trickle: trick.value === "on" }));
+  trickWrap.append(trickLabel, trick);
+
+  // trickle speed
+  const speedWrap = el("div", "setrow");
+  const speedLabel = el("label", undefined, "Feed speed");
+  const speed = el("select", "toneselect") as HTMLSelectElement;
+  for (const [v, label] of [["2500", "Fast"], ["4500", "Normal"], ["8000", "Slow"]]) {
+    const o = el("option") as HTMLOptionElement; o.value = v; o.textContent = label;
+    if (String(s.trickleMs) === v) o.selected = true;
+    speed.append(o);
+  }
+  speed.addEventListener("change", () => setSettings({ trickleMs: Number(speed.value) }));
+  speedWrap.append(speedLabel, speed);
+
+  card.append(trickWrap, speedWrap);
+
+  // data controls
+  const danger = el("div", "addform");
+  danger.append(el("div", "section-label", "Data"));
+  const clearQ = el("button", "dbtn", "Clear all drafts") as HTMLButtonElement;
+  clearQ.addEventListener("click", () => { queueList().slice().forEach((q) => removeQueued(q.id)); });
+  const clearAll = el("button", "dbtn reject", "Reset everything (drafts, sources, prefs)") as HTMLButtonElement;
+  clearAll.addEventListener("click", () => {
+    if (typeof chrome !== "undefined" && chrome.storage?.local) chrome.storage.local.clear(() => location.reload());
+  });
+  danger.append(clearQ, clearAll);
+  danger.append(el("div", "addhint", "Stored data is local to this browser: your drafts, custom sources, target picks, and settings. No tokens or fetched messages are ever stored."));
+
+  view.append(card, danger);
+  return view;
+}
+
 function rebuildNav() {
   const custom = listCustom();
   navItems = [
@@ -512,6 +584,7 @@ function rebuildNav() {
     ...custom.map((c) => ({ id: c.id, label: c.label, accent: c.color })),
     { id: "queue", label: "Queue", accent: "#e0964a" },
     { id: "add", label: "+ Add", accent: "#7d88c8" },
+    { id: "settings", label: "⚙", accent: "#9aa6c4" },
   ];
 
   views.innerHTML = "";
@@ -522,6 +595,7 @@ function rebuildNav() {
     ...custom.map((c) => buildCustomFeedView(c)),
     buildQueueView(),
     buildAddView(),
+    buildSettingsView(),
   );
 
   nav.querySelectorAll(".tab").forEach((b) => b.remove());
@@ -565,8 +639,11 @@ function setActive(id: string) {
   if (id === "queue" && queueBody) renderQueue(queueBody); // refresh on open
 }
 
-// live trickle — only the visible feed grows (a source feed, or Pulse merged)
-window.setInterval(() => {
+// live trickle — only the visible feed grows (a source feed, or Pulse merged).
+// Interval is rescheduled when the Settings speed/toggle changes.
+let trickleTimer: number | undefined;
+function trickleTick() {
+  if (!getSettings().trickle) return;
   if (activeView === "pulse" && pulseFeed) {
     const kind = pulseRotor[pulseTick++ % pulseRotor.length].kind; // round-robin sources
     pulseFeed.prepend(renderMsg(liveFor(kind), kind, true, true));
@@ -577,10 +654,16 @@ window.setInterval(() => {
   if (!feed) return;
   feed.prepend(renderMsg(liveFor(activeView), activeView, true));
   while (feed.childElementCount > 14) feed.lastElementChild?.remove();
-}, 4500);
+}
+function scheduleTrickle() {
+  if (trickleTimer !== undefined) window.clearInterval(trickleTimer);
+  trickleTimer = window.setInterval(trickleTick, getSettings().trickleMs);
+}
+onSettingsChange(scheduleTrickle);
 
 // Hydrate persisted state, then build nav and restore the last tab + queue.
-Promise.all([hydrateQueue(), hydratePrefs(), hydrateCustom()]).then(() => {
+Promise.all([hydrateQueue(), hydratePrefs(), hydrateCustom(), hydrateSettings()]).then(() => {
+  scheduleTrickle();
   rebuildNav();
   if (queueBody) renderQueue(queueBody);
   const last = getLastTab();

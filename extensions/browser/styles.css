@@ -564,3 +564,12 @@ body::after {
 .mysrc .mn { font-size: 13px; font-weight: 700; }
 .mysrc .mu { font-size: 11px; color: var(--faint); }
 .mysrc .rm { margin-left: auto; }
+
+/* ============================================================
+   v10 — tone picker + settings rows
+   ============================================================ */
+.tonerow, .setrow { display: flex; align-items: center; gap: 10px; margin-top: 4px; }
+.tonelabel { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--faint); }
+.setrow label { font-size: 12.5px; color: var(--muted); flex: 1; }
+.toneselect { background: rgba(3,6,14,.5); color: var(--ink); border: 1px solid rgba(255,255,255,.10); border-radius: 9px; padding: 6px 10px; font: inherit; font-size: 12px; outline: none; cursor: pointer; }
+.toneselect:focus { border-color: rgba(76,194,255,.5); }

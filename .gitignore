@@ -16,3 +16,6 @@ secrets/
 # Browser extension is shipped pre-built so it can be loaded without a build step
 !extensions/browser/dist/
 !extensions/browser/dist/**
+
+# Ship the packaged VSIX so it can be installed without building
+!extensions/vscode/help-me-comms.vsix

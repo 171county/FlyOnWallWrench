@@ -13,6 +13,12 @@ export type QueueItem = {
   body: string;
   createdAt: number;
   status: QueueStatus;
+  tone?: string;         // current tone selection (for the tone picker)
+  recompose?: {          // enough to re-run composeDraft when tone changes
+    kind: string;
+    topic: string;
+    intent?: string;
+  };
 };
 
 const KEY = "helpme.queue.v1";
@@ -41,6 +47,10 @@ export function setStatus(id: string, status: QueueStatus): void {
 export function updateBody(id: string, body: string): void {
   const it = items.find((i) => i.id === id);
   if (it) { it.body = body; persist(); emit(); }
+}
+export function applyEdit(id: string, patch: Partial<QueueItem>): void {
+  const it = items.find((i) => i.id === id);
+  if (it) { Object.assign(it, patch); persist(); emit(); }
 }
 export function remove(id: string): void {
   items = items.filter((i) => i.id !== id);

@@ -34,3 +34,19 @@ describe("composeDraft", () => {
     expect(suggestedDraftsFor("community_sentiment")).toContain("poll");
   });
 });
+
+import { applyTone } from "../src/drafts.js";
+
+describe("applyTone", () => {
+  it("official strips slang/emoji and formalizes", () => {
+    const out = applyTone("hey — fix it rn pls 🙏", "official");
+    expect(out).toMatch(/Thanks for the report/);
+    expect(out).not.toMatch(/🙏|\brn\b|\bpls\b|hey/i);
+  });
+  it("technical appends a repro/info checklist", () => {
+    expect(applyTone("Looks like a known issue.", "technical")).toMatch(/load order|crash log/i);
+  });
+  it("auto leaves the body unchanged", () => {
+    expect(applyTone("unchanged body", "auto")).toBe("unchanged body");
+  });
+});

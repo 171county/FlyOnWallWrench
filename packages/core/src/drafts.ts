@@ -7,6 +7,10 @@ import type { ActionType, EvidenceItem, HelpIntent, SourceKind } from "./types.j
 
 export type DraftKind = "reply" | "known_issue" | "faq" | "poll" | "announcement" | "patch_notes";
 
+// Optional tone override the user can pick before approving a draft.
+// "auto" keeps the platform's native voice; the others restyle the text.
+export type DraftTone = "auto" | "casual" | "friendly" | "official" | "technical";
+
 export type DraftRequest = {
   kind: DraftKind;
   source: SourceKind;        // tailors voice + conventions to the target platform
@@ -14,6 +18,7 @@ export type DraftRequest = {
   intent?: HelpIntent;
   evidence?: EvidenceItem[]; // optional supporting evidence to fold in
   prevalence?: number;       // 0..1, how widespread (drives "known issue" tone)
+  tone?: DraftTone;          // optional voice override
 };
 
 export type Draft = {
@@ -149,15 +154,58 @@ export function composeDraft(req: DraftRequest): Draft {
     default: body = replyBody(req);
   }
 
+  const tone = req.tone ?? "auto";
   return {
     kind: req.kind,
     source: req.source,
     actionType: ACTION_TYPE[req.kind],
     title,
-    body,
+    body: applyTone(body, tone),
     requiresApproval: true,
-    voiceNote: `${req.source} voice: ${voiceOf(req.source)}`,
+    voiceNote: tone === "auto" ? `${req.source} voice: ${voiceOf(req.source)}` : `${tone} tone`,
   };
+}
+
+// Lightweight, deterministic tone restyling. Keeps content intact; adjusts
+// register/openers/casing so the user can swap casual <-> official before
+// approving, without an LLM round-trip.
+export function applyTone(body: string, tone: DraftTone): string {
+  if (tone === "auto") return body;
+
+  if (tone === "official") {
+    let b = body
+      .replace(/\bhey+\b[ ,—-]*/gi, "")
+      .replace(/\brn\b/gi, "right now")
+      .replace(/\bpls\b/gi, "please")
+      .replace(/\blmk\b/gi, "let us know")
+      .replace(/\bu\b/gi, "you")
+      .replace(/[ ]*[👇🙏💀✦]/gu, "")
+      .replace(/!+/g, ".");
+    // Capitalize first letter of each line.
+    b = b.replace(/^(\s*)([a-z])/gm, (_m, s, c) => s + c.toUpperCase());
+    return `Thanks for the report. ${b}`.trim();
+  }
+
+  if (tone === "technical") {
+    return [
+      body,
+      "",
+      "Please include: platform/OS, game & mod versions, full load order (LOOT-sorted), and the complete crash log. Note whether it reproduces on a clean/vanilla profile.",
+    ].join("\n");
+  }
+
+  if (tone === "casual") {
+    return body
+      .replace(/^Thanks for (the report|flagging[^.]*)\.\s*/i, "heads up — ")
+      .replace(/\bplease\b/gi, "pls")
+      .replace(/\bWe can reproduce it\b/gi, "yeah we can repro it");
+  }
+
+  if (tone === "friendly") {
+    return `${body}\n\nReally appreciate you flagging this — we'll keep you posted! 🙏`;
+  }
+
+  return body;
 }
 
 // Which drafts make sense for a detected intent — drives the action buttons.

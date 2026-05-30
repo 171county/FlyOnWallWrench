@@ -365,15 +365,41 @@ function composeDraft(req) {
     default:
       body = replyBody(req);
   }
+  const tone = req.tone ?? "auto";
   return {
     kind: req.kind,
     source: req.source,
     actionType: ACTION_TYPE[req.kind],
     title,
-    body,
+    body: applyTone(body, tone),
     requiresApproval: true,
-    voiceNote: `${req.source} voice: ${voiceOf(req.source)}`
+    voiceNote: tone === "auto" ? `${req.source} voice: ${voiceOf(req.source)}` : `${tone} tone`
   };
+}
+function applyTone(body, tone) {
+  if (tone === "auto")
+    return body;
+  if (tone === "official") {
+    let b = body.replace(/\bhey+\b[ ,—-]*/gi, "").replace(/\brn\b/gi, "right now").replace(/\bpls\b/gi, "please").replace(/\blmk\b/gi, "let us know").replace(/\bu\b/gi, "you").replace(/[ ]*[👇🙏💀✦]/gu, "").replace(/!+/g, ".");
+    b = b.replace(/^(\s*)([a-z])/gm, (_m, s, c) => s + c.toUpperCase());
+    return `Thanks for the report. ${b}`.trim();
+  }
+  if (tone === "technical") {
+    return [
+      body,
+      "",
+      "Please include: platform/OS, game & mod versions, full load order (LOOT-sorted), and the complete crash log. Note whether it reproduces on a clean/vanilla profile."
+    ].join("\n");
+  }
+  if (tone === "casual") {
+    return body.replace(/^Thanks for (the report|flagging[^.]*)\.\s*/i, "heads up \u2014 ").replace(/\bplease\b/gi, "pls").replace(/\bWe can reproduce it\b/gi, "yeah we can repro it");
+  }
+  if (tone === "friendly") {
+    return `${body}
+
+Really appreciate you flagging this \u2014 we'll keep you posted! \u{1F64F}`;
+  }
+  return body;
 }
 
 // ../../packages/core/dist/mockWorkspace.js
@@ -971,6 +997,14 @@ function updateBody(id, body) {
     emit();
   }
 }
+function applyEdit(id, patch) {
+  const it = items.find((i) => i.id === id);
+  if (it) {
+    Object.assign(it, patch);
+    persist();
+    emit();
+  }
+}
 function remove(id) {
   items = items.filter((i) => i.id !== id);
   persist();
@@ -1015,12 +1049,35 @@ function setLastTab(lastTab) {
   save(KEY2, prefs);
 }
 
-// src/customSources.ts
-var KEY3 = "helpme.custom.v1";
-var sources = [];
+// src/settings.ts
+var KEY3 = "helpme.settings.v1";
+var DEFAULTS = { trickleMs: 4500, trickle: true };
+var settings = { ...DEFAULTS };
 var listeners3 = /* @__PURE__ */ new Set();
+async function hydrateSettings() {
+  settings = { ...DEFAULTS, ...await load(KEY3, {}) };
+}
+function getSettings() {
+  return settings;
+}
+function setSettings(patch) {
+  settings = { ...settings, ...patch };
+  save(KEY3, settings);
+  emit2();
+}
+function onSettingsChange(fn) {
+  listeners3.add(fn);
+}
+function emit2() {
+  listeners3.forEach((fn) => fn());
+}
+
+// src/customSources.ts
+var KEY4 = "helpme.custom.v1";
+var sources = [];
+var listeners4 = /* @__PURE__ */ new Set();
 async function hydrateCustom() {
-  sources = await load(KEY3, []);
+  sources = await load(KEY4, []);
 }
 function listCustom() {
   return sources;
@@ -1029,20 +1086,20 @@ function addCustom(input) {
   const id = `custom_${input.label.toLowerCase().replace(/[^a-z0-9]+/g, "_")}_${Date.now().toString(36)}`;
   const src = { ...input, id };
   sources = [...sources, src];
-  save(KEY3, sources);
-  emit2();
+  save(KEY4, sources);
+  emit3();
   return src;
 }
 function removeCustom(id) {
   sources = sources.filter((s) => s.id !== id);
-  save(KEY3, sources);
-  emit2();
+  save(KEY4, sources);
+  emit3();
 }
 function onCustomChange(fn) {
-  listeners3.add(fn);
+  listeners4.add(fn);
 }
-function emit2() {
-  listeners3.forEach((fn) => fn());
+function emit3() {
+  listeners4.forEach((fn) => fn());
 }
 
 // src/sidepanel.ts
@@ -1228,7 +1285,7 @@ function buildAskView() {
     const intent = classifyIntent(message);
     for (const kind of sel) {
       const draft = composeDraft({ kind: "poll", source: kind, topic: message, intent });
-      enqueue({ actionType: draft.actionType, source: kind, title: draft.title, body: draft.body });
+      enqueue({ actionType: draft.actionType, source: kind, title: draft.title, body: draft.body, tone: "auto", recompose: { kind: "poll", topic: message, intent } });
       const row = el("div", "qrow");
       const led = el("span", "qled");
       led.style.color = meta(kind).color;
@@ -1283,7 +1340,7 @@ function renderMsg(m, kind, live = false, showSource = false) {
       intent: classifyIntent(m.body),
       evidence: [{ id: m.author, source: kind, title: m.author, summary: m.body, matchedTerms: [], confidenceSignals: { semanticMatch: 0.6, exactTermMatch: 0.5, recency: 0.9, sourceTrust: 0.6, confirmationCount: m.up, sameVersionBonus: 0, resolvedBonus: 0, duplicatePenalty: 0, lowQualityPenalty: 0 }, redacted: true }]
     });
-    enqueue({ actionType: draft.actionType, source: kind, title: draft.title, body: draft.body });
+    enqueue({ actionType: draft.actionType, source: kind, title: draft.title, body: draft.body, tone: "auto", recompose: { kind: "reply", topic: m.body, intent: classifyIntent(m.body) } });
     replyBtn.className = "rbtn queued";
     replyBtn.textContent = "Queued \xB7 approval";
   });
@@ -1379,6 +1436,25 @@ function renderDraftCard(container, item) {
   body.disabled = item.status !== "queued";
   body.addEventListener("input", () => updateBody(item.id, body.value));
   card.append(body);
+  if (item.status === "queued" && item.recompose) {
+    const tr = el("div", "tonerow");
+    tr.append(el("span", "tonelabel", "Tone"));
+    const sel = el("select", "toneselect");
+    for (const [v, label] of [["auto", "Native voice"], ["friendly", "Friendly"], ["official", "Official"], ["technical", "Technical"], ["casual", "Casual"]]) {
+      const o = el("option");
+      o.value = v;
+      o.textContent = label;
+      if ((item.tone ?? "auto") === v) o.selected = true;
+      sel.append(o);
+    }
+    sel.addEventListener("change", () => {
+      const rc = item.recompose;
+      const d = composeDraft({ kind: rc.kind, source: item.source, topic: rc.topic, intent: rc.intent, tone: sel.value });
+      applyEdit(item.id, { body: d.body, tone: sel.value });
+    });
+    tr.append(sel);
+    card.append(tr);
+  }
   if (item.status === "queued") {
     const actions = el("div", "dactions");
     const approve = el("button", "dbtn approve", "\u2713 Approve");
@@ -1528,6 +1604,52 @@ function buildAddView() {
 }
 var navItems = [];
 var navButtons = [];
+function buildSettingsView() {
+  const view = el("div", "view");
+  view.id = "view-settings";
+  const card = el("div", "addform card glass");
+  card.append(el("div", "section-label", "Settings"));
+  const s = getSettings();
+  const trickWrap = el("div", "setrow");
+  const trickLabel = el("label", void 0, "Live feed trickle");
+  const trick = el("select", "toneselect");
+  for (const [v, label] of [["on", "On"], ["off", "Off"]]) {
+    const o = el("option");
+    o.value = v;
+    o.textContent = label;
+    if ((s.trickle ? "on" : "off") === v) o.selected = true;
+    trick.append(o);
+  }
+  trick.addEventListener("change", () => setSettings({ trickle: trick.value === "on" }));
+  trickWrap.append(trickLabel, trick);
+  const speedWrap = el("div", "setrow");
+  const speedLabel = el("label", void 0, "Feed speed");
+  const speed = el("select", "toneselect");
+  for (const [v, label] of [["2500", "Fast"], ["4500", "Normal"], ["8000", "Slow"]]) {
+    const o = el("option");
+    o.value = v;
+    o.textContent = label;
+    if (String(s.trickleMs) === v) o.selected = true;
+    speed.append(o);
+  }
+  speed.addEventListener("change", () => setSettings({ trickleMs: Number(speed.value) }));
+  speedWrap.append(speedLabel, speed);
+  card.append(trickWrap, speedWrap);
+  const danger = el("div", "addform");
+  danger.append(el("div", "section-label", "Data"));
+  const clearQ = el("button", "dbtn", "Clear all drafts");
+  clearQ.addEventListener("click", () => {
+    list().slice().forEach((q) => remove(q.id));
+  });
+  const clearAll = el("button", "dbtn reject", "Reset everything (drafts, sources, prefs)");
+  clearAll.addEventListener("click", () => {
+    if (typeof chrome !== "undefined" && chrome.storage?.local) chrome.storage.local.clear(() => location.reload());
+  });
+  danger.append(clearQ, clearAll);
+  danger.append(el("div", "addhint", "Stored data is local to this browser: your drafts, custom sources, target picks, and settings. No tokens or fetched messages are ever stored."));
+  view.append(card, danger);
+  return view;
+}
 function rebuildNav() {
   const custom = listCustom();
   navItems = [
@@ -1536,7 +1658,8 @@ function rebuildNav() {
     ...connected.map((s) => ({ id: s.source, label: meta(s.source).label, accent: meta(s.source).color })),
     ...custom.map((c) => ({ id: c.id, label: c.label, accent: c.color })),
     { id: "queue", label: "Queue", accent: "#e0964a" },
-    { id: "add", label: "+ Add", accent: "#7d88c8" }
+    { id: "add", label: "+ Add", accent: "#7d88c8" },
+    { id: "settings", label: "\u2699", accent: "#9aa6c4" }
   ];
   views.innerHTML = "";
   views.append(
@@ -1545,7 +1668,8 @@ function rebuildNav() {
     ...connected.map((s) => buildSourceView(s)),
     ...custom.map((c) => buildCustomFeedView(c)),
     buildQueueView(),
-    buildAddView()
+    buildAddView(),
+    buildSettingsView()
   );
   nav.querySelectorAll(".tab").forEach((b) => b.remove());
   navButtons = navItems.map((item) => {
@@ -1584,7 +1708,9 @@ function setActive(id) {
   setLastTab(id);
   if (id === "queue" && queueBody) renderQueue(queueBody);
 }
-window.setInterval(() => {
+var trickleTimer;
+function trickleTick() {
+  if (!getSettings().trickle) return;
   if (activeView === "pulse" && pulseFeed) {
     const kind = pulseRotor[pulseTick++ % pulseRotor.length].kind;
     pulseFeed.prepend(renderMsg(liveFor(kind), kind, true, true));
@@ -1595,8 +1721,14 @@ window.setInterval(() => {
   if (!feed) return;
   feed.prepend(renderMsg(liveFor(activeView), activeView, true));
   while (feed.childElementCount > 14) feed.lastElementChild?.remove();
-}, 4500);
-Promise.all([hydrate(), hydratePrefs(), hydrateCustom()]).then(() => {
+}
+function scheduleTrickle() {
+  if (trickleTimer !== void 0) window.clearInterval(trickleTimer);
+  trickleTimer = window.setInterval(trickleTick, getSettings().trickleMs);
+}
+onSettingsChange(scheduleTrickle);
+Promise.all([hydrate(), hydratePrefs(), hydrateCustom(), hydrateSettings()]).then(() => {
+  scheduleTrickle();
   rebuildNav();
   if (queueBody) renderQueue(queueBody);
   const last = getLastTab();
