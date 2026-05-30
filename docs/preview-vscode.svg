@@ -1,0 +1,118 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720" font-family="ui-sans-serif, -apple-system, 'Segoe UI', sans-serif">
+  <defs>
+    <radialGradient id="bc" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#4cc2ff" stop-opacity="0.7"/><stop offset="100%" stop-color="#4cc2ff" stop-opacity="0"/></radialGradient>
+    <radialGradient id="ba" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#e0964a" stop-opacity="0.5"/><stop offset="100%" stop-color="#e0964a" stop-opacity="0"/></radialGradient>
+    <radialGradient id="bgn" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#2ee06a" stop-opacity="0.28"/><stop offset="100%" stop-color="#2ee06a" stop-opacity="0"/></radialGradient>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#4cc2ff"/><stop offset="52%" stop-color="#6f7bbf"/><stop offset="100%" stop-color="#e0964a"/></linearGradient>
+    <linearGradient id="mtr" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#ff7a3c"/><stop offset="48%" stop-color="#e8b25a"/><stop offset="100%" stop-color="#2ee06a"/></linearGradient>
+    <linearGradient id="gl" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#fff" stop-opacity="0.08"/><stop offset="100%" stop-color="#fff" stop-opacity="0.02"/></linearGradient>
+    <linearGradient id="copper" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#8a4f25"/><stop offset="25%" stop-color="#e6a062"/><stop offset="45%" stop-color="#ffe9c8"/><stop offset="62%" stop-color="#c77b3e"/><stop offset="100%" stop-color="#8a4f25"/></linearGradient>
+    <filter id="soft" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="44"/></filter>
+    <filter id="glow" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="6"/></filter>
+  </defs>
+
+  <!-- VS Code shell -->
+  <rect width="1200" height="720" fill="#1e1e1e"/>
+  <rect width="1200" height="36" fill="#323233"/>
+  <text x="600" y="23" text-anchor="middle" fill="#9aa0a6" font-size="12">crash.log — flyonwallwrench — Visual Studio Code</text>
+  <!-- activity bar -->
+  <rect x="0" y="36" width="48" height="684" fill="#333333"/>
+  <rect x="0" y="60" width="2" height="26" fill="#4cc2ff"/>
+  <g fill="#858585"><rect x="14" y="62" width="20" height="20" rx="3" fill="#cfcfcf"/><rect x="14" y="104" width="20" height="16" rx="3"/><rect x="14" y="142" width="20" height="16" rx="3"/></g>
+  <!-- explorer -->
+  <rect x="48" y="36" width="200" height="684" fill="#252526"/>
+  <text x="64" y="64" fill="#bbbbbb" font-size="11" letter-spacing="1">EXPLORER</text>
+  <g fill="#cccccc" font-size="12.5">
+    <text x="64" y="92">▾ flyonwallwrench</text>
+    <text x="80" y="114" fill="#9aa0a6">packages/</text>
+    <text x="80" y="136" fill="#9aa0a6">apps/</text>
+    <rect x="64" y="146" width="184" height="20" fill="#37373d"/>
+    <text x="80" y="160" fill="#e0964a">crash.log</text>
+    <text x="80" y="182" fill="#9aa0a6">README.md</text>
+  </g>
+
+  <!-- editor -->
+  <rect x="248" y="36" width="552" height="684" fill="#1e1e1e"/>
+  <rect x="248" y="36" width="552" height="30" fill="#2d2d2d"/>
+  <rect x="248" y="36" width="120" height="30" fill="#1e1e1e"/><text x="266" y="55" fill="#e0964a" font-size="12">crash.log</text>
+  <g font-family="ui-monospace, Menlo, monospace" font-size="12.5" fill="#9aa0a6">
+    <text x="268" y="92"><tspan fill="#6a6a6a">1  </tspan>[18:42:07] Booting FactoryBoss arena…</text>
+    <text x="268" y="114"><tspan fill="#6a6a6a">2  </tspan>[18:42:08] LoadAssets: ok (mods: 14)</text>
+    <!-- selection highlight -->
+    <rect x="284" y="122" width="430" height="56" fill="#264f78" opacity="0.55"/>
+    <text x="268" y="138"><tspan fill="#6a6a6a">3  </tspan><tspan fill="#d7dae0">FATAL: NullReferenceException in</tspan></text>
+    <text x="268" y="156"><tspan fill="#6a6a6a">4  </tspan><tspan fill="#d7dae0">  BossIntroSequence.PlayCutscene()</tspan></text>
+    <text x="268" y="174"><tspan fill="#6a6a6a">5  </tspan><tspan fill="#d7dae0">  at frame 2 after patch 1.4.2</tspan></text>
+    <text x="268" y="196"><tspan fill="#6a6a6a">6  </tspan>Stack: render thread → CTD</text>
+    <text x="268" y="218"><tspan fill="#6a6a6a">7  </tspan></text>
+  </g>
+  <!-- command palette hint -->
+  <g transform="translate(300,250)"><rect width="360" height="30" rx="6" fill="#252526" stroke="#4cc2ff" stroke-opacity="0.4"/><text x="14" y="20" fill="#cccccc" font-size="12">&gt; Help Me: Explain Crash Log</text></g>
+
+  <!-- ============ WEBVIEW PANEL (right) ============ -->
+  <g transform="translate(800,36)">
+    <rect width="400" height="684" fill="#070a11"/>
+    <g filter="url(#soft)" opacity="0.8"><circle cx="120" cy="120" r="150" fill="#4cc2ff" fill-opacity="0.5"/><circle cx="340" cy="380" r="150" fill="url(#ba)"/><circle cx="160" cy="620" r="150" fill="url(#bgn)"/></g>
+
+    <!-- brand -->
+    <g transform="translate(24,28)">
+      <rect width="38" height="38" rx="12" fill="url(#g)"/><text x="19" y="25" text-anchor="middle" fill="#061018" font-size="14" font-weight="800">&lt;/&gt;</text>
+      <text x="52" y="14" fill="#4cc2ff" font-size="9.5" letter-spacing="2.2" font-weight="700">FLYONWALL · COMMS</text>
+      <text x="52" y="34" font-size="18" font-weight="800" fill="url(#g)">Help Me Comms</text>
+    </g>
+
+    <!-- copper guardrail header -->
+    <g transform="translate(24,82)">
+      <rect width="352" height="38" rx="13" fill="url(#gl)" stroke="url(#copper)" stroke-width="1.6"/>
+      <circle cx="18" cy="19" r="4.5" fill="#2ee06a"/>
+      <text x="32" y="23" fill="#9aa6c4" font-size="11.5">Sends selected text only · no files edited</text>
+    </g>
+
+    <!-- result card -->
+    <g transform="translate(24,132)">
+      <rect width="352" height="500" rx="16" fill="url(#gl)" stroke="#fff" stroke-opacity="0.10"/>
+      <g transform="translate(16,18)">
+        <!-- chips -->
+        <rect x="0" y="0" width="118" height="24" rx="12" fill="#11151f"/><text x="59" y="16" text-anchor="middle" fill="#9aa6c4" font-size="11" font-weight="700">needs followup</text>
+        <rect x="126" y="0" width="118" height="24" rx="12" fill="#4cc2ff" fill-opacity="0.18" stroke="#fff" stroke-opacity="0.14"/><text x="185" y="16" text-anchor="middle" fill="#eaf2ff" font-size="11" font-weight="700">crash support</text>
+        <!-- answer -->
+        <text x="0" y="48" fill="#dce6ff" font-size="13">This looks like a crash-support issue.</text>
+        <text x="0" y="66" fill="#dce6ff" font-size="13">Strongest community evidence says:</text>
+        <!-- meter -->
+        <text x="0" y="96" fill="#6b7799" font-size="10" letter-spacing="2">CONFIDENCE</text>
+        <rect x="0" y="104" width="270" height="9" rx="4.5" fill="#fff" fill-opacity="0.08"/>
+        <rect x="0" y="104" width="170" height="9" rx="4.5" fill="url(#mtr)" filter="url(#glow)"/>
+        <rect x="0" y="104" width="170" height="9" rx="4.5" fill="url(#mtr)"/>
+        <circle cx="170" cy="108.5" r="6" fill="#2ee06a" opacity="0.9" filter="url(#glow)"/><circle cx="170" cy="108.5" r="3.5" fill="#eafff2"/>
+        <text x="320" y="113" text-anchor="end" fill="#eaf2ff" font-size="12" font-weight="800">63%</text>
+        <!-- sources -->
+        <text x="0" y="142" fill="#6b7799" font-size="10" letter-spacing="2">SOURCES SCOPED</text>
+        <g font-size="11.5" fill="#dbe3ee">
+          <rect x="0" y="150" width="78" height="24" rx="12" fill="#fff" fill-opacity="0.05" stroke="#fff" stroke-opacity="0.10"/><circle cx="14" cy="162" r="4" fill="#5865f2"/><text x="26" y="166">Discord</text>
+          <rect x="84" y="150" width="74" height="24" rx="12" fill="#fff" fill-opacity="0.05" stroke="#fff" stroke-opacity="0.10"/><circle cx="98" cy="162" r="4" fill="#66c0f4"/><text x="110" y="166">Steam</text>
+          <rect x="164" y="150" width="72" height="24" rx="12" fill="#fff" fill-opacity="0.05" stroke="#fff" stroke-opacity="0.10"/><circle cx="178" cy="162" r="4" fill="#2ee06a"/><text x="190" y="166">Forum</text>
+        </g>
+        <!-- evidence -->
+        <text x="0" y="200" fill="#6b7799" font-size="10" letter-spacing="2">TOP EVIDENCE</text>
+        <rect x="0" y="208" width="320" height="58" rx="11" fill="#fff" fill-opacity="0.03" stroke="#fff" stroke-opacity="0.08"/>
+        <text x="14" y="230" fill="#dce6ff" font-size="12">Crashes cluster at the boss intro after</text>
+        <text x="14" y="246" fill="#dce6ff" font-size="12">patch 1.4.2; verify files + disable mods.</text>
+        <text x="14" y="260" fill="#6b7799" font-size="10">discord · 6 confirmations</text>
+        <!-- followup -->
+        <rect x="0" y="278" width="320" height="34" rx="12" fill="#4cc2ff" fill-opacity="0.07" stroke="#4cc2ff" stroke-opacity="0.22"/>
+        <text x="12" y="299" fill="#4cc2ff" font-size="13">✦</text><text x="28" y="299" fill="#cdeffb" font-size="11.5">What platform and mod list are involved?</text>
+        <!-- actions -->
+        <text x="0" y="338" fill="#6b7799" font-size="10" letter-spacing="2">SUGGESTED NEXT ACTIONS</text>
+        <rect x="0" y="346" width="320" height="28" rx="11" fill="#fff" fill-opacity="0.04" stroke="#fff" stroke-opacity="0.10"/><text x="14" y="364" fill="#eaf2ff" font-size="12" font-weight="600">Draft a triage issue</text>
+        <rect x="250" y="350" width="62" height="18" rx="9" fill="none" stroke="#e0964a" stroke-opacity="0.5"/><text x="281" y="362" text-anchor="middle" fill="#e0964a" font-size="8.5" letter-spacing="1">APPROVAL</text>
+        <rect x="0" y="380" width="320" height="28" rx="11" fill="#fff" fill-opacity="0.04" stroke="#fff" stroke-opacity="0.10"/><text x="14" y="398" fill="#eaf2ff" font-size="12" font-weight="600">Draft a known-issue FAQ</text>
+        <rect x="250" y="384" width="62" height="18" rx="9" fill="none" stroke="#e0964a" stroke-opacity="0.5"/><text x="281" y="396" text-anchor="middle" fill="#e0964a" font-size="8.5" letter-spacing="1">APPROVAL</text>
+        <!-- privacy -->
+        <circle cx="4" cy="436" r="4" fill="#2ee06a"/><text x="16" y="440" fill="#6b7799" font-size="10.5">Scoped evidence discarded after the task.</text>
+      </g>
+    </g>
+  </g>
+  <!-- status bar -->
+  <rect x="0" y="700" width="1200" height="20" fill="#0e639c"/>
+  <text x="12" y="714" fill="#fff" font-size="11">Help Me Comms</text>
+</svg>
