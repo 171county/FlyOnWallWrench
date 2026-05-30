@@ -1,5 +1,8 @@
-// Synthetic live-feed content for the local demo. Real read-only adapters (M2)
-// will replace this with actual scoped community items. Flavored per source.
+// Synthetic live-feed content for the local demo. Phrasing mirrors authentic
+// community conventions (CTD, repro, load order, verify files, "anyone else",
+// known-issue, hotfix) per platform register — Discord casual/lowercase, Steam
+// blunt, Reddit PSA-style, forums structured. All handles invented, no real
+// users or copied text. Real read-only adapters (M2) will replace this.
 export type FeedMsg = {
   author: string;
   role: "player" | "modder" | "developer" | "moderator" | "creator";
@@ -10,26 +13,35 @@ export type FeedMsg = {
 };
 
 const BASE: Record<string, FeedMsg[]> = {
+  // Discord — fast, lowercase, fragmented, pings, emoji, logs as attachments
   discord: [
-    { author: "voxel_knight", role: "player", body: "anyone else CTD right at the factory boss intro after 1.4.2?", ago: "just now", sentiment: "neg", up: 6 },
-    { author: "ModMaven", role: "modder", body: "disable the HD texture pack — fixed the boss-intro crash for me", ago: "3m", sentiment: "pos", up: 12 },
-    { author: "patch_gremlin", role: "player", body: "verified files, still crashing. mods: 14. anyone got a clean repro?", ago: "11m", sentiment: "neg", up: 4 },
-    { author: "Aria (mod)", role: "moderator", body: "pinned: known issue at factory boss, devs are looking. post your load order pls", ago: "26m", sentiment: "neu", up: 21 },
-    { author: "frame_chef", role: "modder", body: "rolling back the animation mod cleared the null ref for me", ago: "42m", sentiment: "pos", up: 9 },
+    { author: "ctd_andy", role: "player", body: "@here anyone else CTD right at the factory boss intro after 1.4.2? clean install", ago: "just now", sentiment: "neg", up: 6 },
+    { author: "modmancer", role: "modder", body: "drop the HD texture pack — fixed the boss-intro crash for me. updated my modlist.txt too", ago: "3m", sentiment: "pos", up: 12 },
+    { author: "papyrus_pat", role: "player", body: "verified files, reinstalled, still ctd. mods: 14. anyone got a clean repro? 💀", ago: "11m", sentiment: "neg", up: 4 },
+    { author: "Aria", role: "moderator", body: "📌 KNOWN ISSUE: launch/boss-intro crash on the new build. devs are aware — post your load order, don't spam new tickets 🙏", ago: "26m", sentiment: "neu", up: 21 },
+    { author: "frame_dropout", role: "modder", body: "rolling back the animation mod cleared the null ref for me. did you run LOOT after installing?", ago: "42m", sentiment: "pos", up: 9 },
+    { author: "stutter_sam", role: "player", body: "stutter is way worse since the patch, anyone on a 4070 seeing the same?", ago: "1h", sentiment: "mixed", up: 7 },
   ],
+  // Reddit — PSA titles, detailed bodies, "is anyone else", EDIT: SOLVED culture
   reddit: [
-    { author: "u/grumblecube", role: "player", body: "PSA: factory boss crash workaround — verify files + drop the texture mod", ago: "8m", sentiment: "pos", up: 38 },
-    { author: "u/citybuilder99", role: "player", body: "Anyone else CPU bottleneck in the city after the patch? 5800X3D here", ago: "22m", sentiment: "mixed", up: 17 },
-    { author: "u/modloader_dev", role: "developer", body: "stack points to BossIntroSequence.PlayCutscene() — looks like a null asset ref", ago: "1h", sentiment: "neu", up: 11 },
+    { author: "u/patchnoter", role: "player", body: "PSA: factory boss crash workaround — verify files + drop the texture mod. no more CTD", ago: "8m", sentiment: "pos", up: 38 },
+    { author: "u/gpu_bound_greg", role: "player", body: "Is anyone else getting a CPU bottleneck in the city after the patch? 5800X3D / 3080, stutters every few seconds", ago: "22m", sentiment: "mixed", up: 17 },
+    { author: "u/modloader_dev", role: "developer", body: "Stack points to BossIntroSequence.PlayCutscene() — looks like a missing asset ref introduced in 1.4.2", ago: "1h", sentiment: "neu", up: 11 },
+    { author: "u/vanilla_vince", role: "player", body: "Not just you — the pinned megathread already has 200+ comments about the boss crash", ago: "2h", sentiment: "neu", up: 24 },
+    { author: "u/LOOT_lyfe", role: "modder", body: "Sounds like a load-order issue. Run LOOT, post your sorted order, and we can take a look", ago: "3h", sentiment: "pos", up: 15 },
   ],
+  // Steam — blunt, verdict-first reviews + terse discussion posts
   steam_reviews: [
-    { author: "Helldiver_Hank", role: "player", body: "Great update but it hard-crashes at the boss intro on my rig. fix incoming?", ago: "14m", sentiment: "mixed", up: 5 },
-    { author: "CozyGamerKel", role: "player", body: "Runs way better after 1.4.2 except the city is choppy now", ago: "1h", sentiment: "mixed", up: 7 },
-    { author: "RefundRandy", role: "player", body: "crashes every boss intro since the patch. unplayable for me atm", ago: "3h", sentiment: "neg", up: 3 },
+    { author: "RefundRandy", role: "player", body: "Unplayable after the latest patch. Hard-crashes at the boss intro every time. Wait for a sale.", ago: "14m", sentiment: "neg", up: 5 },
+    { author: "CozyGamerKel", role: "player", body: "Great update but the city runs like garbage now — constant micro-stutters even on a 4090", ago: "1h", sentiment: "mixed", up: 7 },
+    { author: "verify_vera", role: "player", body: "[Help] Verify integrity of game files — found 2 corrupted files, re-downloaded, fixed the crash for me", ago: "2h", sentiment: "pos", up: 13 },
+    { author: "altF4_aaron", role: "player", body: "Anyone else getting crash on alt-tab since the update? Win11 here", ago: "3h", sentiment: "neg", up: 3 },
   ],
+  // Forums — structured, version-stamped, [SOLVED] tags, mod-author replies
   forum: [
-    { author: "BugHunterB", role: "modder", body: "[Bug] FATAL NullReferenceException at factory boss, frame 2 — repro inside", ago: "33m", sentiment: "neg", up: 14 },
-    { author: "Devlog_Dana", role: "developer", body: "tracking the boss-intro crash; suspect a cutscene asset removed in 1.4.2", ago: "2h", sentiment: "neu", up: 19 },
+    { author: "repro_required", role: "modder", body: "[Bug Report] v1.4.2 — CTD on factory boss cell transition, frame 2. Steps to repro + crash log attached.", ago: "33m", sentiment: "neg", up: 14 },
+    { author: "Devlog_Dana", role: "developer", body: "Tracking the boss-intro crash; suspect a cutscene asset removed in 1.4.2. Confirming repro on 1.6.x but not 1.5.x.", ago: "2h", sentiment: "neu", up: 19 },
+    { author: "nexus_nomad", role: "creator", body: "[SOLVED] It was a conflict — moving the patch below both masters resolved it. Marking solved for the next person who googles this.", ago: "4h", sentiment: "pos", up: 22 },
   ],
   default: [
     { author: "community", role: "player", body: "discussing the latest patch and a boss-intro crash", ago: "now", sentiment: "neu", up: 2 },
@@ -38,29 +50,36 @@ const BASE: Record<string, FeedMsg[]> = {
 
 const LIVE: Record<string, string[]> = {
   discord: [
-    "same here, CTD at the boss every time",
+    "same here, ctd at the boss every time. GTX 1080 / win11",
     "load order screenshot? mine's clean and still crashing",
-    "texture mod was it for me too, thanks ModMaven",
-    "+1 crashing, GTX 1080 / win11",
-    "anyone tried verok's hotfix patch?",
+    "texture mod was it for me too, thanks modmancer 🙏",
+    "anyone tried the script extender update? mine was out of date",
+    "+1 crashing, did a clean reinstall and still ctd",
+    "nvm fixed it — old version of the loader, updated and it's fine",
+    "is this the known issue or a new one lol",
   ],
   reddit: [
-    "can confirm the workaround, no more crash",
-    "bottleneck in the city for me too, stutters hard",
-    "cross-post: same crash on the official forum",
+    "Can confirm the workaround, no more crash. EDIT: SOLVED for me",
+    "Bottleneck in the city for me too, frame cap just stopped working",
+    "Cross-post: same CTD reported on the official forum megathread",
+    "DDU'd my drivers + verified files, still stutters. At my wits' end",
+    "Removed — please use the pinned Bug Megathread for patch issues",
   ],
   steam_reviews: [
-    "edit: dropping the texture mod fixed it, bumping to positive",
-    "still crashing for me, please patch",
+    "edit: dropping the texture mod fixed it, bumping to positive 👍",
+    "still crashes every 20 min, zero support response. refunding",
+    "verify integrity found a corrupted file — fixed the freeze",
   ],
   forum: [
-    "attached my full crash.log to the bug thread",
-    "repro confirmed on a fresh install + 1 mod",
+    "Attached my full crash log to the bug thread above",
+    "Reproduced on a clean/vanilla profile with only this mod active",
+    "Missing master error on install — does this need the DLC?",
+    "Merging this into the existing megathread to keep reports together",
   ],
   default: ["new report just came in"],
 };
 
-const AUTHORS = ["nullptr_nate", "saveScummer", "pixel_pilgrim", "RTX_renee", "loadorder_lou", "mod_mage", "ctrl_alt_defeat"];
+const AUTHORS = ["ctd_andy", "LoadOrderLarry", "vanilla_vince", "pixelpriest", "frame_dropout", "modmancer", "stutter_sam", "patchnoter", "LOOT_lyfe", "repro_required", "nexus_nomad", "hotfix_hannah", "triage_tom", "papyrus_pat", "gpu_bound_greg"];
 const ROLES: FeedMsg["role"][] = ["player", "player", "modder", "player", "creator"];
 
 export function recentFor(kind: string): FeedMsg[] {

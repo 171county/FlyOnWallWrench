@@ -15,6 +15,7 @@ import { BaseMockAdapter, createDefaultMockAdapters } from "@help-me-comms/adapt
 import { initShaderBackground } from "./shaderBg";
 import { initParallax } from "./spatial";
 import { liveFor, recentFor, type FeedMsg } from "./feed";
+import { addSignal, localConfirmations } from "./signals";
 
 initShaderBackground("bg");
 initParallax();
@@ -159,6 +160,18 @@ function buildAskView(): HTMLElement {
       const ctx = { ...workspace, connectedSources: workspace.connectedSources.filter((s) => selected.has(s.source)) };
       const data = await communityHelp({ userMessage: message, mode: "community_manager", sourcePolicy: "use_connected_sources_only" }, ctx, sel.map(adapterFor));
       out.innerHTML = "";
+      // Fold the user's own "me too" confirmations from the live feed into the read.
+      const local = localConfirmations(message);
+      if (local.count > 0) {
+        const corr = el("div", "corr");
+        corr.append(el("span", "spark", "✦"));
+        const txt = el("span");
+        txt.append(document.createTextNode("You confirmed this "));
+        txt.append(el("b", undefined, `${local.count}×`));
+        txt.append(document.createTextNode(` from the feed across ${local.sources.map((s) => meta(s).label).join(", ")} — raising prevalence.`));
+        corr.append(txt);
+        out.append(corr);
+      }
       out.append(answerCard(data));
     } finally {
       checkBtn.disabled = false;
@@ -192,20 +205,27 @@ function buildAskView(): HTMLElement {
 /* ---------- per-source view: LIVE feed ---------- */
 const feedEls: Record<string, HTMLElement> = {};
 
-function renderMsg(m: FeedMsg, kind: string, live = false): HTMLElement {
+function renderMsg(m: FeedMsg, kind: string, live = false, showSource = false): HTMLElement {
   const row = el("div", live ? "msg in" : "msg");
   const av = el("div", "av", m.author.charAt(0).toUpperCase());
   av.style.background = meta(kind).color;
   const mb = el("div", "mb");
   const mh = el("div", "mh");
   const sd = el("span", "sdot"); sd.style.background = SENT[m.sentiment];
-  mh.append(sd, el("span", "mn", m.author), el("span", "role", m.role), el("span", "mt", m.ago));
+  mh.append(sd, el("span", "mn", m.author), el("span", "role", m.role));
+  if (showSource) { const sb = el("span", "src", meta(kind).label); sb.style.background = meta(kind).color; mh.append(sb); }
+  mh.append(el("span", "mt", m.ago));
   mb.append(mh, el("div", "mtext", m.body));
   const react = el("div", "react");
   let up = m.up;
   const upBtn = el("button", "rbtn", `▲ ${up}`) as HTMLButtonElement;
   const meBtn = el("button", "rbtn", "+ me too") as HTMLButtonElement;
-  meBtn.addEventListener("click", () => { if (meBtn.classList.contains("done")) return; up += 1; upBtn.textContent = `▲ ${up}`; meBtn.className = "rbtn done"; meBtn.textContent = "✓ me too"; });
+  meBtn.addEventListener("click", () => {
+    if (meBtn.classList.contains("done")) return;
+    up += 1; upBtn.textContent = `▲ ${up}`;
+    meBtn.className = "rbtn done"; meBtn.textContent = "✓ me too";
+    addSignal(m.body, kind); // real correlation: feeds Ask's prevalence read
+  });
   const replyBtn = el("button", "rbtn", "Draft reply") as HTMLButtonElement;
   replyBtn.addEventListener("click", () => { if (replyBtn.classList.contains("queued")) return; queueAction(createActionPlan({ actionType: "reply", draft: "(reply draft)", targetRef: kind, allowedClient: "web_app" })); replyBtn.className = "rbtn queued"; replyBtn.textContent = "Queued · approval"; });
   react.append(upBtn, meBtn, replyBtn);
@@ -249,7 +269,30 @@ function buildSourceView(cap: SourceCapabilities): HTMLElement {
   return view;
 }
 
-/* ---------- nav (Ask + connected sources) ---------- */
+/* ---------- Pulse: one merged cross-source feed (the home room) ---------- */
+let pulseFeed: HTMLElement | null = null;
+const pulseRotor: Array<{ kind: string }> = connected.map((s) => ({ kind: s.source }));
+let pulseTick = 0;
+
+function buildPulseView(): HTMLElement {
+  const view = el("div", "view");
+  view.id = "view-pulse";
+
+  const head = el("div", "pulsehead");
+  const live = el("span", "live"); live.append(el("span", "pulse"), document.createTextNode("Live"));
+  head.append(el("span", "section-label", "Pulse · every connected source, interleaved"), live);
+
+  // seed: the freshest message from each source, newest first
+  const feed = el("div", "feed");
+  const seed = connected.map((s) => ({ kind: s.source, msg: recentFor(s.source)[0] }));
+  for (const s of seed) feed.append(renderMsg(s.msg, s.kind, false, true));
+  pulseFeed = feed;
+
+  view.append(head, feed);
+  return view;
+}
+
+/* ---------- nav (Ask + Pulse + connected sources) ---------- */
 const nav = document.getElementById("nav") as HTMLElement;
 const indicator = document.getElementById("ind") as HTMLElement;
 const views = document.getElementById("views") as HTMLElement;
@@ -257,10 +300,11 @@ const views = document.getElementById("views") as HTMLElement;
 type NavItem = { id: string; label: string; accent: string };
 const navItems: NavItem[] = [
   { id: "ask", label: "Ask", accent: "#4cc2ff" },
+  { id: "pulse", label: "Pulse", accent: "#2ee06a" },
   ...connected.map((s) => ({ id: s.source, label: meta(s.source).label, accent: meta(s.source).color })),
 ];
 
-views.append(buildAskView(), ...connected.map((s) => buildSourceView(s)));
+views.append(buildAskView(), buildPulseView(), ...connected.map((s) => buildSourceView(s)));
 
 const navButtons: HTMLButtonElement[] = navItems.map((item) => {
   const b = el("button", "tab") as HTMLButtonElement;
@@ -273,7 +317,7 @@ const navButtons: HTMLButtonElement[] = navItems.map((item) => {
   return b;
 });
 
-let activeFeedKind: string | null = null;
+let activeView: string = "ask";
 function setActive(id: string) {
   const btn = navButtons.find((b) => b.dataset.tab === id);
   if (!btn) return;
@@ -283,15 +327,20 @@ function setActive(id: string) {
   indicator.style.width = `${btn.offsetWidth}px`;
   btn.scrollIntoView({ inline: "nearest", block: "nearest", behavior: "smooth" });
   views.querySelectorAll<HTMLElement>(".view").forEach((v) => v.classList.toggle("active", v.id === `view-${id}`));
-  activeFeedKind = id !== "ask" && feedEls[id] ? id : null;
+  activeView = id;
 }
 
-// single live trickle — only the visible source feed grows, twitch-chat style
+// live trickle — only the visible feed grows (a source feed, or Pulse merged)
 window.setInterval(() => {
-  if (!activeFeedKind) return;
-  const feed = feedEls[activeFeedKind];
+  if (activeView === "pulse" && pulseFeed) {
+    const kind = pulseRotor[pulseTick++ % pulseRotor.length].kind; // round-robin sources
+    pulseFeed.prepend(renderMsg(liveFor(kind), kind, true, true));
+    while (pulseFeed.childElementCount > 16) pulseFeed.lastElementChild?.remove();
+    return;
+  }
+  const feed = feedEls[activeView];
   if (!feed) return;
-  feed.prepend(renderMsg(liveFor(activeFeedKind), activeFeedKind, true));
+  feed.prepend(renderMsg(liveFor(activeView), activeView, true));
   while (feed.childElementCount > 14) feed.lastElementChild?.remove();
 }, 4500);
 

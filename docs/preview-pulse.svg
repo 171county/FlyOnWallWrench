@@ -1,0 +1,173 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="760" viewBox="0 0 1040 760" font-family="ui-sans-serif, -apple-system, 'Segoe UI', sans-serif">
+  <defs>
+    <radialGradient id="bc" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#4cc2ff" stop-opacity="0.8"/><stop offset="100%" stop-color="#4cc2ff" stop-opacity="0"/></radialGradient>
+    <radialGradient id="bs" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#6f7bbf" stop-opacity="0.7"/><stop offset="100%" stop-color="#6f7bbf" stop-opacity="0"/></radialGradient>
+    <radialGradient id="ba" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#e0964a" stop-opacity="0.5"/><stop offset="100%" stop-color="#e0964a" stop-opacity="0"/></radialGradient>
+    <radialGradient id="bgn" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#2ee06a" stop-opacity="0.3"/><stop offset="100%" stop-color="#2ee06a" stop-opacity="0"/></radialGradient>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#4cc2ff"/><stop offset="52%" stop-color="#6f7bbf"/><stop offset="100%" stop-color="#e0964a"/></linearGradient>
+    <linearGradient id="gl" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#fff" stop-opacity="0.09"/><stop offset="100%" stop-color="#fff" stop-opacity="0.025"/></linearGradient>
+    <linearGradient id="copper" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#8a4f25"/><stop offset="25%" stop-color="#e6a062"/><stop offset="45%" stop-color="#ffe9c8"/><stop offset="62%" stop-color="#c77b3e"/><stop offset="100%" stop-color="#8a4f25"/></linearGradient>
+    <linearGradient id="neon" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#4cc2ff"/><stop offset="45%" stop-color="#7d88c8"/><stop offset="78%" stop-color="#e0964a"/><stop offset="100%" stop-color="#2ee06a"/></linearGradient>
+    <filter id="soft" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="42"/></filter>
+    <filter id="glow" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="6"/></filter>
+    <filter id="drop" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="16" stdDeviation="18" flood-color="#000" flood-opacity="0.55"/></filter>
+  </defs>
+
+  <rect width="1040" height="760" fill="#070a11"/>
+  <g filter="url(#soft)" opacity="0.85">
+    <circle cx="180" cy="160" r="180" fill="url(#bs)"/><circle cx="120" cy="560" r="160" fill="url(#bgn)"/>
+    <circle cx="880" cy="140" r="200" fill="url(#bc)"/><circle cx="940" cy="560" r="180" fill="url(#ba)"/><circle cx="540" cy="680" r="150" fill="url(#bgn)"/>
+  </g>
+  <text x="40" y="34" fill="#8a96a8" font-size="13">Pulse · all sources interleaved (the home room)</text>
+  <text x="556" y="34" fill="#8a96a8" font-size="13">Ask · your "me too" clicks raise prevalence</text>
+
+  <!-- ================= PULSE PANEL ================= -->
+  <g transform="translate(40,52)">
+    <g filter="url(#drop)"><rect width="476" height="676" rx="22" fill="url(#gl)" stroke="#fff" stroke-opacity="0.11"/></g>
+    <rect x="22" y="22" width="40" height="40" rx="13" fill="url(#g)"/><text x="42" y="48" text-anchor="middle" fill="#061018" font-size="15" font-weight="800">&lt;/&gt;</text>
+    <text x="74" y="34" fill="#4cc2ff" font-size="10" letter-spacing="2.2" font-weight="700">FLYONWALL · COMMUNITY BRAIN</text>
+    <text x="74" y="58" font-size="20" font-weight="800" fill="url(#g)">Help Me Comms</text>
+
+    <!-- rail (Pulse active = green) -->
+    <g transform="translate(22,78)">
+      <rect x="-2" y="-2" width="436" height="46" rx="17" fill="none" stroke="url(#copper)" stroke-opacity="0.5" stroke-width="3.5" filter="url(#glow)"/>
+      <rect width="432" height="42" rx="15" fill="url(#gl)" stroke="url(#copper)" stroke-width="1.8"/>
+      <rect x="62" y="5" width="68" height="32" rx="11" fill="#2ee06a" filter="url(#glow)"/><rect x="62" y="5" width="68" height="32" rx="11" fill="#2ee06a"/>
+      <g font-size="12" font-weight="700">
+        <circle cx="20" cy="21" r="3.5" fill="#4cc2ff"/><text x="36" y="25" fill="#9aa6c4">Ask</text>
+        <text x="96" y="25" text-anchor="middle" fill="#06150d">Pulse</text>
+        <circle cx="152" cy="21" r="3.5" fill="#5865f2"/><text x="184" y="25" text-anchor="middle" fill="#9aa6c4">Discord</text>
+        <circle cx="240" cy="21" r="3.5" fill="#ff4500"/><text x="270" y="25" text-anchor="middle" fill="#9aa6c4">Reddit</text>
+        <circle cx="318" cy="21" r="3.5" fill="#66c0f4"/><text x="348" y="25" text-anchor="middle" fill="#9aa6c4">Steam</text>
+        <circle cx="396" cy="21" r="3.5" fill="#2ee06a"/><text x="416" y="25" text-anchor="middle" fill="#9aa6c4">···</text>
+      </g>
+    </g>
+
+    <!-- pulse head -->
+    <g transform="translate(22,138)">
+      <text x="0" y="12" fill="#6b7799" font-size="10" letter-spacing="2">PULSE · EVERY CONNECTED SOURCE, INTERLEAVED</text>
+      <circle cx="398" cy="8" r="4" fill="#2ee06a"/><text x="410" y="12" fill="#2ee06a" font-size="10" letter-spacing="1.5" font-weight="700">LIVE</text>
+    </g>
+
+    <!-- interleaved messages with SOURCE badges -->
+    <g transform="translate(22,156)" font-family="ui-sans-serif">
+      <!-- live Discord -->
+      <g>
+        <rect width="432" height="70" rx="12" fill="#2ee06a" fill-opacity="0.05" stroke="#2ee06a" stroke-opacity="0.22"/>
+        <rect x="11" y="11" width="28" height="28" rx="9" fill="#5865f2"/><text x="25" y="30" text-anchor="middle" fill="#06121a" font-size="12" font-weight="800">C</text>
+        <circle cx="52" cy="21" r="3.5" fill="#ff7a3c"/><text x="62" y="25" fill="#dbe3ee" font-size="12" font-weight="700">ctd_andy</text>
+        <rect x="132" y="14" width="44" height="14" rx="7" fill="none" stroke="#fff" stroke-opacity="0.14"/><text x="154" y="24" text-anchor="middle" fill="#6b7799" font-size="8">PLAYER</text>
+        <rect x="182" y="13" width="52" height="16" rx="8" fill="#5865f2"/><text x="208" y="25" text-anchor="middle" fill="#fff" font-size="8" font-weight="700">DISCORD</text>
+        <text x="424" y="25" text-anchor="end" fill="#6b7799" font-size="10">just now</text>
+        <text x="50" y="46" fill="#cfd8e8" font-size="12.5">same here, ctd at the boss every time. GTX 1080</text>
+        <rect x="50" y="52" width="40" height="15" rx="7" fill="rgba(255,255,255,.04)" stroke="#fff" stroke-opacity="0.1"/><text x="70" y="63" text-anchor="middle" fill="#9aa6c4" font-size="9">▲ 2</text>
+        <rect x="96" y="52" width="58" height="15" rx="7" fill="rgba(255,255,255,.04)" stroke="#fff" stroke-opacity="0.1"/><text x="125" y="63" text-anchor="middle" fill="#9aa6c4" font-size="9">+ me too</text>
+      </g>
+      <!-- Steam -->
+      <g transform="translate(0,78)">
+        <rect width="432" height="70" rx="12" fill="rgba(255,255,255,.03)" stroke="#fff" stroke-opacity="0.07"/>
+        <rect x="11" y="11" width="28" height="28" rx="9" fill="#66c0f4"/><text x="25" y="30" text-anchor="middle" fill="#06121a" font-size="12" font-weight="800">R</text>
+        <circle cx="52" cy="21" r="3.5" fill="#ff7a3c"/><text x="62" y="25" fill="#dbe3ee" font-size="12" font-weight="700">RefundRandy</text>
+        <rect x="150" y="14" width="44" height="14" rx="7" fill="none" stroke="#fff" stroke-opacity="0.14"/><text x="172" y="24" text-anchor="middle" fill="#6b7799" font-size="8">PLAYER</text>
+        <rect x="200" y="13" width="46" height="16" rx="8" fill="#66c0f4"/><text x="223" y="25" text-anchor="middle" fill="#06121a" font-size="8" font-weight="700">STEAM</text>
+        <text x="424" y="25" text-anchor="end" fill="#6b7799" font-size="10">14m</text>
+        <text x="50" y="46" fill="#cfd8e8" font-size="12.5">Unplayable after the patch. Hard-crashes at the boss</text>
+        <text x="50" y="62" fill="#cfd8e8" font-size="12.5">intro every time. Wait for a sale.</text>
+      </g>
+      <!-- Reddit -->
+      <g transform="translate(0,156)">
+        <rect width="432" height="70" rx="12" fill="rgba(255,255,255,.03)" stroke="#fff" stroke-opacity="0.07"/>
+        <rect x="11" y="11" width="28" height="28" rx="9" fill="#ff4500"/><text x="25" y="30" text-anchor="middle" fill="#06121a" font-size="12" font-weight="800">P</text>
+        <circle cx="52" cy="21" r="3.5" fill="#2ee06a"/><text x="62" y="25" fill="#dbe3ee" font-size="12" font-weight="700">u/patchnoter</text>
+        <rect x="152" y="14" width="44" height="14" rx="7" fill="none" stroke="#fff" stroke-opacity="0.14"/><text x="174" y="24" text-anchor="middle" fill="#6b7799" font-size="8">PLAYER</text>
+        <rect x="202" y="13" width="50" height="16" rx="8" fill="#ff4500"/><text x="227" y="25" text-anchor="middle" fill="#fff" font-size="8" font-weight="700">REDDIT</text>
+        <text x="424" y="25" text-anchor="end" fill="#6b7799" font-size="10">8m</text>
+        <text x="50" y="46" fill="#cfd8e8" font-size="12.5">PSA: boss crash workaround — verify files + drop</text>
+        <text x="50" y="62" fill="#cfd8e8" font-size="12.5">the texture mod. no more CTD</text>
+      </g>
+      <!-- Forum -->
+      <g transform="translate(0,234)">
+        <rect width="432" height="70" rx="12" fill="rgba(255,255,255,.03)" stroke="#fff" stroke-opacity="0.07"/>
+        <rect x="11" y="11" width="28" height="28" rx="9" fill="#2ee06a"/><text x="25" y="30" text-anchor="middle" fill="#06121a" font-size="12" font-weight="800">D</text>
+        <circle cx="52" cy="21" r="3.5" fill="#7d88c8"/><text x="62" y="25" fill="#dbe3ee" font-size="12" font-weight="700">Devlog_Dana</text>
+        <rect x="158" y="14" width="58" height="14" rx="7" fill="none" stroke="#fff" stroke-opacity="0.14"/><text x="187" y="24" text-anchor="middle" fill="#6b7799" font-size="8">DEVELOPER</text>
+        <rect x="222" y="13" width="46" height="16" rx="8" fill="#2ee06a"/><text x="245" y="25" text-anchor="middle" fill="#06150d" font-size="8" font-weight="700">FORUM</text>
+        <text x="424" y="25" text-anchor="end" fill="#6b7799" font-size="10">2h</text>
+        <text x="50" y="46" fill="#cfd8e8" font-size="12.5">Tracking the boss-intro crash; cutscene asset removed</text>
+        <text x="50" y="62" fill="#cfd8e8" font-size="12.5">in 1.4.2. Repro on 1.6.x but not 1.5.x.</text>
+      </g>
+      <!-- fade -->
+      <g transform="translate(0,312)" opacity="0.45">
+        <rect width="432" height="34" rx="12" fill="rgba(255,255,255,.03)" stroke="#fff" stroke-opacity="0.07"/>
+        <rect x="11" y="7" width="22" height="22" rx="7" fill="#5865f2"/>
+        <text x="44" y="23" fill="#cfd8e8" font-size="11.5">modmancer · DISCORD: drop the HD texture pack…</text>
+      </g>
+    </g>
+  </g>
+
+  <!-- ================= ASK + CORRELATION PANEL ================= -->
+  <g transform="translate(556,52)">
+    <g filter="url(#drop)"><rect width="444" height="676" rx="22" fill="url(#gl)" stroke="#fff" stroke-opacity="0.11"/></g>
+    <rect x="22" y="22" width="40" height="40" rx="13" fill="url(#g)"/><text x="42" y="48" text-anchor="middle" fill="#061018" font-size="15" font-weight="800">&lt;/&gt;</text>
+    <text x="74" y="34" fill="#4cc2ff" font-size="10" letter-spacing="2.2" font-weight="700">FLYONWALL · COMMUNITY BRAIN</text>
+    <text x="74" y="58" font-size="20" font-weight="800" fill="url(#g)">Help Me Comms</text>
+
+    <!-- rail (Ask active) -->
+    <g transform="translate(22,78)">
+      <rect x="-2" y="-2" width="404" height="46" rx="17" fill="none" stroke="url(#copper)" stroke-opacity="0.5" stroke-width="3.5" filter="url(#glow)"/>
+      <rect width="400" height="42" rx="15" fill="url(#gl)" stroke="url(#copper)" stroke-width="1.8"/>
+      <rect x="5" y="5" width="60" height="32" rx="11" fill="#4cc2ff" filter="url(#glow)"/><rect x="5" y="5" width="60" height="32" rx="11" fill="#4cc2ff"/>
+      <g font-size="12" font-weight="700">
+        <text x="35" y="25" text-anchor="middle" fill="#06121a">Ask</text>
+        <circle cx="86" cy="21" r="3.5" fill="#2ee06a"/><text x="118" y="25" text-anchor="middle" fill="#9aa6c4">Pulse</text>
+        <circle cx="176" cy="21" r="3.5" fill="#5865f2"/><text x="208" y="25" text-anchor="middle" fill="#9aa6c4">Discord</text>
+        <circle cx="288" cy="21" r="3.5" fill="#ff4500"/><text x="318" y="25" text-anchor="middle" fill="#9aa6c4">Reddit</text>
+        <text x="380" y="25" text-anchor="middle" fill="#6b7799">···</text>
+      </g>
+    </g>
+
+    <!-- composer -->
+    <g transform="translate(22,136)">
+      <rect width="400" height="130" rx="16" fill="url(#gl)" stroke="#fff" stroke-opacity="0.10"/>
+      <rect x="12" y="12" width="376" height="44" rx="12" fill="#03060e" fill-opacity="0.55" stroke="#4cc2ff" stroke-opacity="0.45"/>
+      <text x="24" y="39" fill="#eaf2ff" font-size="13.5">Anyone else crashing at the factory boss?</text>
+      <text x="14" y="78" fill="#6b7799" font-size="10" letter-spacing="2">SEND TO</text>
+      <g font-size="11">
+        <rect x="14" y="86" width="78" height="26" rx="13" fill="#5865f2" fill-opacity="0.13" stroke="#5865f2" stroke-opacity="0.6"/><circle cx="28" cy="99" r="4" fill="#5865f2"/><text x="40" y="103" fill="#eaf2ff">Discord</text>
+        <rect x="100" y="86" width="70" height="26" rx="13" fill="#66c0f4" fill-opacity="0.13" stroke="#66c0f4" stroke-opacity="0.6"/><circle cx="114" cy="99" r="4" fill="#66c0f4"/><text x="126" y="103" fill="#eaf2ff">Steam</text>
+        <rect x="178" y="86" width="70" height="26" rx="13" fill="rgba(255,255,255,.04)" stroke="#fff" stroke-opacity="0.1"/><circle cx="192" cy="99" r="4" fill="#ff4500"/><text x="204" y="103" fill="#9aa6c4">Reddit</text>
+      </g>
+      <rect x="262" y="86" width="126" height="34" rx="13" fill="url(#g)"/><text x="325" y="108" text-anchor="middle" fill="#06121a" font-size="12.5" font-weight="700">Check who else ✦</text>
+    </g>
+
+    <!-- CORRELATION BANNER (your me-too clicks) -->
+    <g transform="translate(22,282)">
+      <rect width="400" height="40" rx="12" fill="#2ee06a" fill-opacity="0.08" stroke="#2ee06a" stroke-opacity="0.28"/>
+      <text x="16" y="26" fill="#2ee06a" font-size="14">✦</text>
+      <text x="34" y="26" fill="#d7ffe6" font-size="12.5">You confirmed this <tspan fill="#2ee06a" font-weight="700">3×</tspan> from the feed across Discord, Steam — raising prevalence.</text>
+    </g>
+
+    <!-- answer card -->
+    <g transform="translate(22,334)">
+      <rect x="0.8" y="0.8" width="398" height="316" rx="16" fill="none" stroke="url(#neon)" stroke-width="1.5" stroke-opacity="0.5"/>
+      <rect width="400" height="318" rx="16" fill="url(#gl)" stroke="#fff" stroke-opacity="0.10"/>
+      <rect x="16" y="16" width="100" height="22" rx="11" fill="#2ee06a"/><text x="66" y="31" text-anchor="middle" fill="#06150d" font-size="11" font-weight="700">widespread</text>
+      <rect x="124" y="16" width="118" height="22" rx="11" fill="#4cc2ff" fill-opacity="0.18" stroke="#fff" stroke-opacity="0.14"/><text x="183" y="31" text-anchor="middle" fill="#eaf2ff" font-size="11" font-weight="700">community sentiment</text>
+      <text x="16" y="62" fill="#dce6ff" font-size="13">The factory-boss crash is widely reported and</text>
+      <text x="16" y="80" fill="#dce6ff" font-size="13">trending after 1.4.2 — not isolated to you.</text>
+      <text x="16" y="110" fill="#6b7799" font-size="10" letter-spacing="2">CONFIDENCE</text>
+      <rect x="16" y="118" width="300" height="9" rx="4.5" fill="#fff" fill-opacity="0.08"/>
+      <rect x="16" y="118" width="240" height="9" rx="4.5" fill="#2ee06a" filter="url(#glow)"/><rect x="16" y="118" width="240" height="9" rx="4.5" fill="#2ee06a"/>
+      <circle cx="256" cy="122.5" r="6" fill="#2ee06a" opacity="0.9" filter="url(#glow)"/><circle cx="256" cy="122.5" r="3.5" fill="#eafff2"/>
+      <text x="384" y="127" text-anchor="end" fill="#eaf2ff" font-size="12" font-weight="800">80%</text>
+      <text x="16" y="156" fill="#6b7799" font-size="10" letter-spacing="2">WHO'S SEEING IT</text>
+      <g font-size="11" fill="#dbe3ee">
+        <rect x="16" y="164" width="74" height="22" rx="11" fill="#fff" fill-opacity="0.05" stroke="#fff" stroke-opacity="0.1"/><circle cx="30" cy="175" r="4" fill="#5865f2"/><text x="42" y="179">Discord</text>
+        <rect x="96" y="164" width="62" height="22" rx="11" fill="#fff" fill-opacity="0.05" stroke="#fff" stroke-opacity="0.1"/><circle cx="110" cy="175" r="4" fill="#66c0f4"/><text x="122" y="179">Steam</text>
+      </g>
+      <rect x="16" y="200" width="368" height="34" rx="12" fill="#4cc2ff" fill-opacity="0.07" stroke="#4cc2ff" stroke-opacity="0.22"/>
+      <text x="28" y="221" fill="#4cc2ff" font-size="13">✦</text><text x="44" y="221" fill="#cdeffb" font-size="11.5">Want to ask the community which fix they prefer?</text>
+      <circle cx="20" cy="270" r="4" fill="#2ee06a"/><text x="32" y="274" fill="#6b7799" font-size="10.5">Scoped evidence is discarded after the task.</text>
+    </g>
+  </g>
+</svg>

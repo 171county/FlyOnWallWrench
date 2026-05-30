@@ -509,3 +509,13 @@ body::after {
 .qrow { display: flex; align-items: center; gap: 9px; padding: 9px 11px; border-radius: 11px; background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.08); font-size: 12.5px; color: #dbe3ee; }
 .qrow .qled { width: 8px; height: 8px; border-radius: 50%; box-shadow: 0 0 8px currentColor; }
 .qrow .qstate { margin-left: auto; font-size: 9.5px; letter-spacing: 1px; text-transform: uppercase; color: var(--amber); border: 1px solid rgba(224,150,74,.4); padding: 3px 7px; border-radius: 999px; }
+
+/* ============================================================
+   v7 — Pulse (merged cross-source feed) + correlation badges
+   ============================================================ */
+.msg .src { font-size: 9px; letter-spacing: .5px; text-transform: uppercase; font-weight: 700; padding: 1px 7px; border-radius: 999px; color: #06121a; }
+.metoo-tally { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: var(--lime); font-weight: 700; padding: 4px 10px; border-radius: 999px; background: color-mix(in srgb, var(--lime) 12%, transparent); border: 1px solid color-mix(in srgb, var(--lime) 35%, transparent); }
+.metoo-tally .spark { filter: drop-shadow(0 0 6px var(--lime)); }
+.corr { display: flex; align-items: center; gap: 8px; padding: 9px 12px; border-radius: 12px; background: color-mix(in srgb, var(--lime) 8%, transparent); border: 1px solid color-mix(in srgb, var(--lime) 28%, transparent); font-size: 12.5px; color: #d7ffe6; }
+.corr b { color: var(--lime); }
+.pulsehead { display: flex; align-items: center; justify-content: space-between; }
