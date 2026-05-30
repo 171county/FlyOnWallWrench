@@ -1,0 +1,8 @@
+{
+  "public_posting": "approval_required",
+  "browser_form_submit": "approval_required",
+  "vscode_apply_diff": "approval_required",
+  "vscode_run_task": "approval_required",
+  "moderation_actions": "disabled",
+  "private_dms": "disabled"
+}

@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="540" height="760" viewBox="0 0 540 760" font-family="ui-sans-serif, -apple-system, 'Segoe UI', sans-serif">
+  <defs>
+    <radialGradient id="bc" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#4cc2ff" stop-opacity="0.7"/><stop offset="100%" stop-color="#4cc2ff" stop-opacity="0"/></radialGradient>
+    <radialGradient id="bs" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#7d88c8" stop-opacity="0.6"/><stop offset="100%" stop-color="#7d88c8" stop-opacity="0"/></radialGradient>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#4cc2ff"/><stop offset="52%" stop-color="#6f7bbf"/><stop offset="100%" stop-color="#e0964a"/></linearGradient>
+    <linearGradient id="gl" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#fff" stop-opacity="0.09"/><stop offset="100%" stop-color="#fff" stop-opacity="0.025"/></linearGradient>
+    <linearGradient id="copper" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#8a4f25"/><stop offset="25%" stop-color="#e6a062"/><stop offset="45%" stop-color="#ffe9c8"/><stop offset="62%" stop-color="#c77b3e"/><stop offset="100%" stop-color="#8a4f25"/></linearGradient>
+    <filter id="soft" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="40"/></filter>
+    <filter id="glow" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="6"/></filter>
+    <filter id="drop" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="14" stdDeviation="16" flood-color="#000" flood-opacity="0.5"/></filter>
+  </defs>
+  <rect width="540" height="760" fill="#070a11"/>
+  <g filter="url(#soft)" opacity="0.85"><circle cx="120" cy="160" r="170" fill="url(#bs)"/><circle cx="440" cy="560" r="180" fill="url(#bc)"/></g>
+
+  <g transform="translate(50,40)">
+    <g filter="url(#drop)"><rect width="440" height="680" rx="22" fill="url(#gl)" stroke="#fff" stroke-opacity="0.11"/></g>
+    <rect x="22" y="22" width="40" height="40" rx="13" fill="url(#g)"/><text x="42" y="48" text-anchor="middle" fill="#061018" font-size="15" font-weight="800">&lt;/&gt;</text>
+    <text x="74" y="34" fill="#4cc2ff" font-size="10" letter-spacing="2.2" font-weight="700">FLYONWALL · COMMUNITY BRAIN</text>
+    <text x="74" y="58" font-size="20" font-weight="800" fill="url(#g)">Help Me Comms</text>
+
+    <!-- rail w/ +Add active (slate) and a custom tab present -->
+    <g transform="translate(22,78)">
+      <rect x="-2" y="-2" width="400" height="46" rx="17" fill="none" stroke="url(#copper)" stroke-opacity="0.5" stroke-width="3.5" filter="url(#glow)"/>
+      <rect width="396" height="42" rx="15" fill="url(#gl)" stroke="url(#copper)" stroke-width="1.8"/>
+      <rect x="318" y="5" width="74" height="32" rx="11" fill="#7d88c8" filter="url(#glow)"/><rect x="318" y="5" width="74" height="32" rx="11" fill="#7d88c8"/>
+      <g font-size="11" font-weight="700">
+        <circle cx="16" cy="21" r="3.5" fill="#4cc2ff"/><text x="30" y="25" fill="#9aa6c4">Ask</text>
+        <circle cx="64" cy="21" r="3.5" fill="#2ee06a"/><text x="92" y="25" text-anchor="middle" fill="#9aa6c4">Pulse</text>
+        <circle cx="138" cy="21" r="3.5" fill="#5865f2"/><text x="166" y="25" text-anchor="middle" fill="#9aa6c4">Discord</text>
+        <circle cx="222" cy="21" r="3.5" fill="#e6a062"/><text x="258" y="25" text-anchor="middle" fill="#9aa6c4">My Forum</text>
+        <text x="355" y="25" text-anchor="middle" fill="#0a0f1a">+ Add</text>
+      </g>
+    </g>
+
+    <!-- add form -->
+    <g transform="translate(22,140)">
+      <rect width="396" height="320" rx="16" fill="url(#gl)" stroke="#fff" stroke-opacity="0.10"/>
+      <text x="16" y="28" fill="#6b7799" font-size="10" letter-spacing="2">ADD A CUSTOM SOURCE</text>
+      <text x="16" y="52" fill="#6b7799" font-size="9" letter-spacing="1.5">NAME</text>
+      <rect x="16" y="58" width="364" height="36" rx="11" fill="#03060e" fill-opacity="0.5" stroke="#fff" stroke-opacity="0.09"/>
+      <text x="28" y="81" fill="#eaf2ff" font-size="13">My Game Forum</text>
+      <text x="16" y="116" fill="#6b7799" font-size="9" letter-spacing="1.5">TYPE</text>
+      <rect x="16" y="122" width="176" height="36" rx="11" fill="#03060e" fill-opacity="0.5" stroke="#fff" stroke-opacity="0.09"/>
+      <text x="28" y="145" fill="#eaf2ff" font-size="13">Discourse forum ▾</text>
+      <text x="204" y="116" fill="#6b7799" font-size="9" letter-spacing="1.5">ACCENT</text>
+      <rect x="204" y="122" width="176" height="36" rx="11" fill="#03060e" fill-opacity="0.5" stroke="#fff" stroke-opacity="0.09"/>
+      <circle cx="222" cy="140" r="6" fill="#e0964a"/><text x="236" y="145" fill="#eaf2ff" font-size="12">#e0964a ▾</text>
+      <text x="16" y="180" fill="#6b7799" font-size="9" letter-spacing="1.5">URL</text>
+      <rect x="16" y="186" width="364" height="36" rx="11" fill="#03060e" fill-opacity="0.5" stroke="#4cc2ff" stroke-opacity="0.45"/>
+      <text x="28" y="209" fill="#eaf2ff" font-size="12.5">https://forum.mygame.com</text>
+      <rect x="16" y="234" width="150" height="38" rx="12" fill="url(#g)"/><text x="91" y="258" text-anchor="middle" fill="#06121a" font-size="13.5" font-weight="700">Add source ✦</text>
+      <text x="16" y="294" fill="#6b7799" font-size="10.5">Discourse exposes a public JSON API. RSS/Atom works for</text>
+      <text x="16" y="308" fill="#6b7799" font-size="10.5">devlogs &amp; patch feeds. Read-only — nothing is ever posted.</text>
+    </g>
+
+    <!-- existing sources -->
+    <g transform="translate(22,476)">
+      <text x="0" y="10" fill="#6b7799" font-size="10" letter-spacing="2">YOUR SOURCES</text>
+      <rect x="0" y="20" width="396" height="48" rx="11" fill="rgba(255,255,255,.03)" stroke="#fff" stroke-opacity="0.08"/>
+      <circle cx="22" cy="44" r="6" fill="#e6a062"/>
+      <text x="40" y="40" fill="#eaf2ff" font-size="13" font-weight="700">My Forum</text>
+      <text x="40" y="56" fill="#6b7799" font-size="10.5">discourse · https://forum.mygame.com</text>
+      <rect x="312" y="32" width="72" height="24" rx="10" fill="rgba(255,255,255,.05)" stroke="#fff" stroke-opacity="0.14"/><text x="348" y="48" text-anchor="middle" fill="#eaf2ff" font-size="11" font-weight="700">Remove</text>
+
+      <rect x="0" y="78" width="396" height="48" rx="11" fill="rgba(255,255,255,.03)" stroke="#fff" stroke-opacity="0.08"/>
+      <circle cx="22" cy="102" r="6" fill="#2ee06a"/>
+      <text x="40" y="98" fill="#eaf2ff" font-size="13" font-weight="700">Patch Notes</text>
+      <text x="40" y="114" fill="#6b7799" font-size="10.5">rss · https://mygame.com/devlog/feed.xml</text>
+      <rect x="312" y="90" width="72" height="24" rx="10" fill="rgba(255,255,255,.05)" stroke="#fff" stroke-opacity="0.14"/><text x="348" y="106" text-anchor="middle" fill="#eaf2ff" font-size="11" font-weight="700">Remove</text>
+    </g>
+  </g>
+</svg>

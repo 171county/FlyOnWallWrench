@@ -1,0 +1,24 @@
+{
+  "name": "@help-me-comms/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "test": "echo \"add web tests\"",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@help-me-comms/core": "workspace:*",
+    "@help-me-comms/adapters": "workspace:*",
+    "next": "^15.1.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "typescript": "^5.7.2"
+  }
+}

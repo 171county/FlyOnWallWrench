@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ActionPlan",
+  "type": "object",
+  "required": ["action_id", "action_type", "approval_required", "draft"],
+  "properties": {
+    "action_id": { "type": "string" },
+    "action_type": { "type": "string" },
+    "target_ref": { "type": "string" },
+    "target_summary": { "type": "string" },
+    "draft": { "type": "string" },
+    "approval_required": { "type": "boolean" },
+    "client_actions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "type": { "type": "string" },
+          "allowed_client": { "type": "string" },
+          "requires_visible_user_confirmation": { "type": "boolean" }
+        },
+        "additionalProperties": true
+      }
+    },
+    "evidence_refs": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "status": {
+      "type": "string",
+      "enum": ["drafted", "queued", "approved", "rejected", "expired"]
+    }
+  },
+  "additionalProperties": false
+}

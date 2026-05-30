@@ -1,0 +1,134 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="780" viewBox="0 0 1040 780" font-family="ui-sans-serif, -apple-system, 'Segoe UI', sans-serif">
+  <defs>
+    <radialGradient id="bc" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#4cc2ff" stop-opacity="0.8"/><stop offset="100%" stop-color="#4cc2ff" stop-opacity="0"/></radialGradient>
+    <radialGradient id="ba" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#e0964a" stop-opacity="0.55"/><stop offset="100%" stop-color="#e0964a" stop-opacity="0"/></radialGradient>
+    <radialGradient id="bgn" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#2ee06a" stop-opacity="0.3"/><stop offset="100%" stop-color="#2ee06a" stop-opacity="0"/></radialGradient>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#4cc2ff"/><stop offset="52%" stop-color="#6f7bbf"/><stop offset="100%" stop-color="#e0964a"/></linearGradient>
+    <linearGradient id="gl" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#fff" stop-opacity="0.09"/><stop offset="100%" stop-color="#fff" stop-opacity="0.025"/></linearGradient>
+    <linearGradient id="copper" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#8a4f25"/><stop offset="25%" stop-color="#e6a062"/><stop offset="45%" stop-color="#ffe9c8"/><stop offset="62%" stop-color="#c77b3e"/><stop offset="100%" stop-color="#8a4f25"/></linearGradient>
+    <linearGradient id="neon" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#4cc2ff"/><stop offset="45%" stop-color="#e0964a"/><stop offset="100%" stop-color="#2ee06a"/></linearGradient>
+    <filter id="soft" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="42"/></filter>
+    <filter id="glow" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="6"/></filter>
+    <filter id="drop" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="16" stdDeviation="18" flood-color="#000" flood-opacity="0.55"/></filter>
+  </defs>
+
+  <rect width="1040" height="780" fill="#070a11"/>
+  <g filter="url(#soft)" opacity="0.85">
+    <circle cx="180" cy="160" r="180" fill="url(#bc)"/><circle cx="160" cy="600" r="160" fill="url(#bgn)"/>
+    <circle cx="880" cy="160" r="200" fill="url(#ba)"/><circle cx="900" cy="600" r="180" fill="url(#bc)"/>
+  </g>
+  <text x="40" y="34" fill="#8a96a8" font-size="13">Feed → "Draft reply" generates authentic, on-platform voice…</text>
+  <text x="556" y="34" fill="#8a96a8" font-size="13">…and it lands in the Queue tab for review + approve</text>
+
+  <!-- ============ DISCORD FEED w/ draft reply ============ -->
+  <g transform="translate(40,52)">
+    <g filter="url(#drop)"><rect width="476" height="700" rx="22" fill="url(#gl)" stroke="#fff" stroke-opacity="0.11"/></g>
+    <rect x="22" y="22" width="40" height="40" rx="13" fill="url(#g)"/><text x="42" y="48" text-anchor="middle" fill="#061018" font-size="15" font-weight="800">&lt;/&gt;</text>
+    <text x="74" y="34" fill="#4cc2ff" font-size="10" letter-spacing="2.2" font-weight="700">FLYONWALL · COMMUNITY BRAIN</text>
+    <text x="74" y="58" font-size="20" font-weight="800" fill="url(#g)">Help Me Comms</text>
+
+    <!-- rail (Discord active), Queue tab shows badge -->
+    <g transform="translate(22,78)">
+      <rect x="-2" y="-2" width="436" height="46" rx="17" fill="none" stroke="url(#copper)" stroke-opacity="0.5" stroke-width="3.5" filter="url(#glow)"/>
+      <rect width="432" height="42" rx="15" fill="url(#gl)" stroke="url(#copper)" stroke-width="1.8"/>
+      <rect x="92" y="5" width="78" height="32" rx="11" fill="#5865f2" filter="url(#glow)"/><rect x="92" y="5" width="78" height="32" rx="11" fill="#5865f2"/>
+      <g font-size="11.5" font-weight="700">
+        <circle cx="18" cy="21" r="3.5" fill="#4cc2ff"/><text x="32" y="25" fill="#9aa6c4">Ask</text>
+        <circle cx="62" cy="21" r="3.5" fill="#2ee06a"/><text x="76" y="25" fill="#9aa6c4" opacity="0">P</text>
+        <text x="131" y="25" text-anchor="middle" fill="#fff">Discord</text>
+        <circle cx="200" cy="21" r="3.5" fill="#ff4500"/><text x="228" y="25" text-anchor="middle" fill="#9aa6c4">Reddit</text>
+        <circle cx="282" cy="21" r="3.5" fill="#66c0f4"/><text x="310" y="25" text-anchor="middle" fill="#9aa6c4">Steam</text>
+        <text x="372" y="25" text-anchor="middle" fill="#9aa6c4">Queue</text>
+        <circle cx="410" cy="14" r="9" fill="#e0964a"/><text x="410" y="18" text-anchor="middle" fill="#1a0f06" font-size="10" font-weight="800">2</text>
+      </g>
+    </g>
+
+    <!-- a feed message -->
+    <g transform="translate(22,140)">
+      <text x="0" y="12" fill="#6b7799" font-size="10" letter-spacing="2">DISCORD COMMUNITY FEED</text>
+      <circle cx="404" cy="8" r="4" fill="#2ee06a"/><text x="416" y="12" fill="#2ee06a" font-size="10" letter-spacing="1.5" font-weight="700">LIVE</text>
+    </g>
+    <g transform="translate(22,158)">
+      <rect width="432" height="92" rx="12" fill="rgba(255,255,255,.03)" stroke="#fff" stroke-opacity="0.07"/>
+      <rect x="11" y="11" width="28" height="28" rx="9" fill="#5865f2"/><text x="25" y="30" text-anchor="middle" fill="#06121a" font-size="12" font-weight="800">C</text>
+      <circle cx="52" cy="21" r="3.5" fill="#ff7a3c"/><text x="62" y="25" fill="#dbe3ee" font-size="12" font-weight="700">ctd_andy</text>
+      <rect x="132" y="14" width="44" height="14" rx="7" fill="none" stroke="#fff" stroke-opacity="0.14"/><text x="154" y="24" text-anchor="middle" fill="#6b7799" font-size="8">PLAYER</text>
+      <text x="424" y="25" text-anchor="end" fill="#6b7799" font-size="10">just now</text>
+      <text x="50" y="46" fill="#cfd8e8" font-size="12.5">@here anyone else CTD right at the factory boss</text>
+      <text x="50" y="62" fill="#cfd8e8" font-size="12.5">intro after 1.4.2? clean install</text>
+      <rect x="50" y="70" width="40" height="16" rx="8" fill="rgba(255,255,255,.04)" stroke="#fff" stroke-opacity="0.1"/><text x="70" y="82" text-anchor="middle" fill="#9aa6c4" font-size="9.5">▲ 6</text>
+      <rect x="96" y="70" width="60" height="16" rx="8" fill="rgba(255,255,255,.04)" stroke="#fff" stroke-opacity="0.1"/><text x="126" y="82" text-anchor="middle" fill="#9aa6c4" font-size="9.5">+ me too</text>
+      <rect x="162" y="70" width="92" height="16" rx="8" fill="#e0964a"/><text x="208" y="82" text-anchor="middle" fill="#1a0f06" font-size="9.5" font-weight="700">Queued · approval</text>
+    </g>
+
+    <!-- the generated discord-voice draft (preview of what got queued) -->
+    <g transform="translate(22,266)">
+      <rect x="0.8" y="0.8" width="430" height="200" rx="16" fill="none" stroke="url(#neon)" stroke-width="1.5" stroke-opacity="0.5"/>
+      <rect width="432" height="202" rx="16" fill="url(#gl)" stroke="#fff" stroke-opacity="0.10"/>
+      <text x="16" y="28" fill="#6b7799" font-size="10" letter-spacing="2">GENERATED REPLY · DISCORD VOICE (casual, lowercase, fast)</text>
+      <text x="16" y="54" fill="#dce6ff" font-size="12.5">hey — re: factory boss crash, this is a known one rn 👇</text>
+      <text x="16" y="80" fill="#dce6ff" font-size="12.5">can you drop your full load order + crash log? (and</text>
+      <text x="16" y="96" fill="#dce6ff" font-size="12.5">confirm you verified files / updated the script extender)</text>
+      <text x="16" y="122" fill="#dce6ff" font-size="12.5">what's worked for others:</text>
+      <text x="16" y="140" fill="#9aa6c4" font-size="12">- disable the HD texture pack — fixed it for several folks</text>
+      <text x="16" y="170" fill="#2ee06a" font-size="11">✦ uses real community conventions: CTD, load order, verify files,</text>
+      <text x="16" y="186" fill="#2ee06a" font-size="11">   script extender — not generic AI filler.</text>
+    </g>
+  </g>
+
+  <!-- ============ QUEUE TAB ============ -->
+  <g transform="translate(556,52)">
+    <g filter="url(#drop)"><rect width="444" height="700" rx="22" fill="url(#gl)" stroke="#fff" stroke-opacity="0.11"/></g>
+    <rect x="22" y="22" width="40" height="40" rx="13" fill="url(#g)"/><text x="42" y="48" text-anchor="middle" fill="#061018" font-size="15" font-weight="800">&lt;/&gt;</text>
+    <text x="74" y="34" fill="#4cc2ff" font-size="10" letter-spacing="2.2" font-weight="700">FLYONWALL · COMMUNITY BRAIN</text>
+    <text x="74" y="58" font-size="20" font-weight="800" fill="url(#g)">Help Me Comms</text>
+
+    <!-- rail (Queue active = amber) -->
+    <g transform="translate(22,78)">
+      <rect x="-2" y="-2" width="404" height="46" rx="17" fill="none" stroke="url(#copper)" stroke-opacity="0.5" stroke-width="3.5" filter="url(#glow)"/>
+      <rect width="400" height="42" rx="15" fill="url(#gl)" stroke="url(#copper)" stroke-width="1.8"/>
+      <rect x="318" y="5" width="78" height="32" rx="11" fill="#e0964a" filter="url(#glow)"/><rect x="318" y="5" width="78" height="32" rx="11" fill="#e0964a"/>
+      <g font-size="11.5" font-weight="700">
+        <circle cx="18" cy="21" r="3.5" fill="#4cc2ff"/><text x="32" y="25" fill="#9aa6c4">Ask</text>
+        <circle cx="70" cy="21" r="3.5" fill="#2ee06a"/><text x="100" y="25" text-anchor="middle" fill="#9aa6c4">Pulse</text>
+        <circle cx="150" cy="21" r="3.5" fill="#5865f2"/><text x="184" y="25" text-anchor="middle" fill="#9aa6c4">Discord</text>
+        <circle cx="252" cy="21" r="3.5" fill="#ff4500"/><text x="278" y="25" text-anchor="middle" fill="#9aa6c4">···</text>
+        <text x="357" y="25" text-anchor="middle" fill="#1a0f06">Queue</text>
+      </g>
+    </g>
+
+    <text x="22" y="148" fill="#6b7799" font-size="10" letter-spacing="2">APPROVAL QUEUE · NOTHING POSTS UNTIL YOU APPROVE</text>
+
+    <!-- draft card 1: queued reply (editable) -->
+    <g transform="translate(22,160)">
+      <rect x="0.8" y="0.8" width="398" height="226" rx="16" fill="none" stroke="url(#neon)" stroke-width="1.4" stroke-opacity="0.45"/>
+      <rect width="400" height="228" rx="16" fill="url(#gl)" stroke="#fff" stroke-opacity="0.10"/>
+      <rect x="16" y="16" width="54" height="22" rx="11" fill="#5865f2"/><text x="43" y="31" text-anchor="middle" fill="#fff" font-size="10" font-weight="800">REPLY</text>
+      <circle cx="86" cy="27" r="4" fill="#5865f2"/><text x="98" y="31" fill="#9aa6c4" font-size="11">Discord</text>
+      <rect x="320" y="17" width="64" height="20" rx="10" fill="none" stroke="#e0964a" stroke-opacity="0.5"/><text x="352" y="31" text-anchor="middle" fill="#e0964a" font-size="9" letter-spacing="1">QUEUED</text>
+      <!-- editable body -->
+      <rect x="16" y="48" width="368" height="104" rx="11" fill="#03060e" fill-opacity="0.5" stroke="#fff" stroke-opacity="0.09"/>
+      <text x="28" y="70" fill="#dce6ff" font-size="11.5">hey — re: factory boss crash, this is a known one rn 👇</text>
+      <text x="28" y="88" fill="#dce6ff" font-size="11.5">can you drop your full load order + crash log?</text>
+      <text x="28" y="106" fill="#dce6ff" font-size="11.5">what's worked for others:</text>
+      <text x="28" y="124" fill="#9aa6c4" font-size="11">- disable the HD texture pack</text>
+      <text x="28" y="144" fill="#6b7799" font-size="9.5" font-style="italic">editable before you approve ✎</text>
+      <!-- actions -->
+      <rect x="16" y="166" width="96" height="34" rx="11" fill="#2ee06a"/><text x="64" y="188" text-anchor="middle" fill="#06150d" font-size="12" font-weight="700">✓ Approve</text>
+      <rect x="120" y="166" width="80" height="34" rx="11" fill="rgba(255,255,255,.05)" stroke="#fff" stroke-opacity="0.14"/><text x="160" y="188" text-anchor="middle" fill="#eaf2ff" font-size="12" font-weight="700">Reject</text>
+      <rect x="208" y="166" width="70" height="34" rx="11" fill="rgba(255,255,255,.05)" stroke="#fff" stroke-opacity="0.14"/><text x="243" y="188" text-anchor="middle" fill="#eaf2ff" font-size="12" font-weight="700">Copy</text>
+    </g>
+
+    <!-- draft card 2: approved poll -->
+    <g transform="translate(22,400)">
+      <rect width="400" height="150" rx="16" fill="url(#gl)" stroke="#2ee06a" stroke-opacity="0.3"/>
+      <rect x="16" y="16" width="48" height="22" rx="11" fill="#66c0f4"/><text x="40" y="31" text-anchor="middle" fill="#06121a" font-size="10" font-weight="800">POLL</text>
+      <circle cx="80" cy="27" r="4" fill="#66c0f4"/><text x="92" y="31" fill="#9aa6c4" font-size="11">Steam</text>
+      <rect x="320" y="17" width="64" height="20" rx="10" fill="#2ee06a"/><text x="352" y="31" text-anchor="middle" fill="#06150d" font-size="9" letter-spacing="1" font-weight="700">APPROVED</text>
+      <rect x="16" y="48" width="368" height="58" rx="11" fill="#03060e" fill-opacity="0.4" stroke="#fff" stroke-opacity="0.07"/>
+      <text x="28" y="70" fill="#dce6ff" font-size="11.5">Quick poll: how widespread is the factory boss crash?</text>
+      <text x="28" y="88" fill="#9aa6c4" font-size="11">🔴 consistently  🟡 sometimes  🟢 not seeing it</text>
+      <circle cx="22" cy="128" r="4" fill="#2ee06a"/><text x="34" y="132" fill="#6b7799" font-size="10.5">Approved — paste into the client to post. Never posts on its own.</text>
+    </g>
+  </g>
+</svg>

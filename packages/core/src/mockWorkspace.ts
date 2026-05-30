@@ -1,0 +1,58 @@
+import type { WorkspaceContext } from "./types.js";
+
+export const mockWorkspaceContext: WorkspaceContext = {
+  workspaceId: "demo_workspace",
+  projects: ["Example Game", "Example Mod Toolkit"],
+  connectedSources: [
+    {
+      source: "discord",
+      read: true,
+      write: "approval_required",
+      supportsThreads: true,
+      supportsSearch: true,
+      supportsRealtime: true,
+      supportsPrivateSpaces: true,
+      supportsUserOwnedRetention: true,
+      approvedSpaces: ["support", "bug-reports", "announcements", "feedback"],
+    },
+    {
+      source: "steam_reviews",
+      read: true,
+      write: "disabled",
+      supportsThreads: false,
+      supportsSearch: true,
+      supportsRealtime: false,
+      supportsPrivateSpaces: false,
+      supportsUserOwnedRetention: false,
+    },
+    {
+      source: "reddit",
+      read: true,
+      write: "approval_required",
+      supportsThreads: true,
+      supportsSearch: true,
+      supportsRealtime: false,
+      supportsPrivateSpaces: false,
+      supportsUserOwnedRetention: false,
+    },
+    {
+      source: "forum",
+      read: true,
+      write: "approval_required",
+      supportsThreads: true,
+      supportsSearch: true,
+      supportsRealtime: false,
+      supportsPrivateSpaces: true,
+      supportsUserOwnedRetention: true,
+    },
+  ],
+  availableButNotEnabled: ["youtube", "twitch", "github_discussions", "github_issues", "slack", "matrix"],
+  providerMode: "unset",
+  defaultPolicy: {
+    autoAnswerPrivateHelp: true,
+    publicPosting: "approval_required",
+    moderation: "disabled",
+    privateDms: "disabled",
+    retention: "ephemeral",
+  },
+};

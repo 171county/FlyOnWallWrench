@@ -1,0 +1,20 @@
+{
+  "name": "@help-me-comms/browser-extension",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json --noEmit && node build.mjs",
+    "test": "echo \"add browser extension tests\"",
+    "lint": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@help-me-comms/core": "workspace:*",
+    "@help-me-comms/adapters": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2",
+    "@types/chrome": "^0.0.287",
+    "esbuild": "^0.24.2"
+  }
+}
