@@ -45,6 +45,6 @@ export function createAdapters(env: Record<string, string | undefined> = {}): Co
     redditReadFromEnv(env) ?? new RedditAdapter(),
     steamReadFromEnv(env) ?? new SteamReviewsAdapter(),
     new ForumAdapter(),
-    new GithubDiscussionsAdapter(),
+    githubReadFromEnv(env) ?? new GithubDiscussionsAdapter(),
   ];
 }
