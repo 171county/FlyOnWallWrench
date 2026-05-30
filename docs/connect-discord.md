@@ -55,3 +55,44 @@ The side-panel extension intentionally uses the **mock feed**, because a browser
 bundle is not a safe place for a bot token. To see live Discord in a UI, run the
 **team web app** (`pnpm --filter @help-me-comms/web dev`) with your `.env`, or
 use it through an MCP client (ChatGPT/Claude/Cursor) pointed at the MCP server.
+
+---
+
+# Connect Steam (live reviews — no token)
+
+Easiest source. Steam's review API is public.
+
+1. Find your game's **App ID** (the number in its store URL:
+   `store.steampowered.com/app/`**`<APPID>`**`/...`).
+2. In `.env`:
+   ```bash
+   HELP_ME_STEAM_APP_IDS=<appid>,<another-appid>
+   ```
+
+The MCP server / team web app now read recent English reviews for those apps.
+Read-only; nothing is written.
+
+---
+
+# Connect Reddit (live)
+
+1. Go to **https://www.reddit.com/prefs/apps** → **Create another app**.
+2. Type: **script**. Note the **client ID** (under the app name) and **secret**.
+3. In `.env`:
+   ```bash
+   HELP_ME_REDDIT_CLIENT_ID=your-client-id
+   HELP_ME_REDDIT_CLIENT_SECRET=your-secret
+   HELP_ME_REDDIT_SUBREDDITS=YourGame,YourGameMods
+   ```
+
+Reads recent posts from those subreddits (app-only OAuth). Read-only; public
+posting would route through the approval-safe action path, never this adapter.
+
+---
+
+## Prove any source locally
+
+`scripts/prove-discord.mjs` shows the pattern for Discord. The same env-gated
+adapters power the MCP server and team web app — set the vars above, run
+`pnpm --filter @help-me-comms/web dev`, and the live data flows through the same
+screens. Each source falls back to the safe mock until its vars are set.
