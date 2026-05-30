@@ -9,35 +9,37 @@
   <body class="popup">
     <canvas id="bg"></canvas>
     <main class="shell">
-      <header class="brand">
-        <div class="logo">&lt;/&gt;</div>
-        <div>
-          <div class="kicker">FlyOnWall &middot; Comms</div>
-          <h1 class="title">Help&nbsp;Me</h1>
+      <div class="stage">
+        <header class="brand">
+          <div class="logo">&lt;/&gt;</div>
+          <div>
+            <div class="kicker">FlyOnWall &middot; Comms</div>
+            <h1 class="title">Help&nbsp;Me</h1>
+          </div>
+        </header>
+
+        <div class="actions">
+          <button id="ask-selection" class="action">
+            <span class="ico">&#9101;</span>
+            <span>Ask about <b>selected text</b></span>
+            <span class="chev">&rsaquo;</span>
+          </button>
+          <button id="ask-page" class="action">
+            <span class="ico">&#9678;</span>
+            <span>Ask about <b>visible page</b></span>
+            <span class="chev">&rsaquo;</span>
+          </button>
+          <button id="open-sidepanel" class="action ghost">
+            <span class="ico">&#9636;</span>
+            <span>Open <b>side panel</b></span>
+            <span class="chev">&rsaquo;</span>
+          </button>
         </div>
-      </header>
 
-      <div class="actions">
-        <button id="ask-selection" class="action">
-          <span class="ico">&#9101;</span>
-          <span>Ask about <b>selected text</b></span>
-          <span class="chev">&rsaquo;</span>
-        </button>
-        <button id="ask-page" class="action">
-          <span class="ico">&#9678;</span>
-          <span>Ask about <b>visible page</b></span>
-          <span class="chev">&rsaquo;</span>
-        </button>
-        <button id="open-sidepanel" class="action ghost">
-          <span class="ico">&#9636;</span>
-          <span>Open <b>side panel</b></span>
-          <span class="chev">&rsaquo;</span>
-        </button>
+        <footer class="trust">
+          <span class="dot"></span> Nothing is posted or submitted automatically.
+        </footer>
       </div>
-
-      <footer class="trust">
-        <span class="dot"></span> Nothing is posted or submitted automatically.
-      </footer>
       <div id="toast" class="toast"></div>
     </main>
     <script type="module" src="dist/popup.js"></script>

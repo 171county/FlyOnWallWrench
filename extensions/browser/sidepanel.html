@@ -9,23 +9,46 @@
   <body class="panel">
     <canvas id="bg"></canvas>
     <main class="shell">
-      <header class="brand">
-        <div class="logo">&lt;/&gt;</div>
-        <div>
-          <div class="kicker">FlyOnWall &middot; Community Brain</div>
-          <h1 class="title">Help&nbsp;Me&nbsp;Comms</h1>
-        </div>
-      </header>
+      <div class="stage">
+        <header class="brand">
+          <div class="logo">&lt;/&gt;</div>
+          <div>
+            <div class="kicker">FlyOnWall &middot; Community Brain</div>
+            <h1 class="title">Help&nbsp;Me&nbsp;Comms</h1>
+          </div>
+        </header>
 
-      <div class="composer glass">
-        <textarea id="question" placeholder="I'm crashing at the factory boss intro. What do I do?"></textarea>
-        <div class="composer-bar">
-          <span class="hint">Reads only what you paste or select</span>
-          <button id="ask" class="primary">Ask Help&nbsp;Me <span class="spark">&#10022;</span></button>
+        <div class="tabs-wrap">
+          <nav class="tabs" id="tabs" style="--tab-accent:#38e8ff">
+            <span class="tab-ind" id="tab-ind"></span>
+            <button class="tab" data-tab="ask"     data-accent="#38e8ff" style="--a:#38e8ff" aria-selected="true"><span class="led"></span>Ask</button>
+            <button class="tab" data-tab="answer"  data-accent="#8b5cff" style="--a:#8b5cff" aria-selected="false"><span class="led"></span>Answer</button>
+            <button class="tab" data-tab="sources" data-accent="#ff4d9d" style="--a:#ff4d9d" aria-selected="false"><span class="led"></span>Evidence</button>
+            <button class="tab" data-tab="actions" data-accent="#b6ff5a" style="--a:#b6ff5a" aria-selected="false"><span class="led"></span>Actions</button>
+          </nav>
+        </div>
+
+        <div class="views">
+          <section class="view active" id="view-ask">
+            <div class="composer glass">
+              <textarea id="question" placeholder="I'm crashing at the factory boss intro. What do I do?"></textarea>
+              <div class="composer-bar">
+                <span class="hint">Reads only what you paste or select</span>
+                <button id="ask" class="primary">Ask Help&nbsp;Me <span class="spark">&#10022;</span></button>
+              </div>
+            </div>
+          </section>
+          <section class="view" id="view-answer">
+            <div class="empty"><span class="big" style="--a:#8b5cff">&#10022;</span>Ask a question and the conversational answer lands here.</div>
+          </section>
+          <section class="view" id="view-sources">
+            <div class="empty"><span class="big" style="--a:#ff4d9d">&#9678;</span>Confidence and scoped community sources appear after you ask.</div>
+          </section>
+          <section class="view" id="view-actions">
+            <div class="empty"><span class="big" style="--a:#b6ff5a">&#9998;</span>Approval-safe next actions show up here.</div>
+          </section>
         </div>
       </div>
-
-      <section id="result" class="result"></section>
     </main>
     <script type="module" src="dist/sidepanel.js"></script>
   </body>

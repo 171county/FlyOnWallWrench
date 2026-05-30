@@ -1,6 +1,8 @@
 import { initShaderBackground } from "./shaderBg.js";
+import { initParallax } from "./spatial.js";
 
 initShaderBackground("bg");
+initParallax();
 
 async function getActiveTab() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
