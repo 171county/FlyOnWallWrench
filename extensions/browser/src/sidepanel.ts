@@ -16,7 +16,8 @@ import { initShaderBackground } from "./shaderBg";
 import { initParallax } from "./spatial";
 import { liveFor, recentFor, type FeedMsg } from "./feed";
 import { addSignal, localConfirmations } from "./signals";
-import { enqueue, list as queueList, onChange as onQueueChange, pendingCount, setStatus, updateBody, type QueueItem } from "./queue";
+import { clearResolved, enqueue, hydrate as hydrateQueue, list as queueList, onChange as onQueueChange, pendingCount, remove as removeQueued, setStatus, updateBody, type QueueItem } from "./queue";
+import { getLastTab, getTargets, hydratePrefs, setLastTab, setTargets } from "./prefs";
 
 initShaderBackground("bg");
 initParallax();
@@ -119,10 +120,12 @@ function buildAskView(): HTMLElement {
   composer.append(ta);
   composer.append(el("div", "section-label", "Send to"));
   const targets = el("div", "targets");
-  const selected = new Set<SourceKind>(connected.map((s) => s.source));
+  // restore saved target selection (falls back to all connected)
+  const savedTargets = getTargets(connected.map((s) => s.source));
+  const selected = new Set<SourceKind>(savedTargets.filter((t) => connected.some((s) => s.source === t)) as SourceKind[]);
   for (const s of connected) {
     const chip = el("button", "target") as HTMLButtonElement;
-    chip.setAttribute("aria-pressed", "true");
+    chip.setAttribute("aria-pressed", String(selected.has(s.source)));
     chip.style.setProperty("--tc", meta(s.source).color);
     const led = el("span", "led"); led.style.color = meta(s.source).color;
     chip.append(led, document.createTextNode(meta(s.source).label));
@@ -130,6 +133,7 @@ function buildAskView(): HTMLElement {
       const on = chip.getAttribute("aria-pressed") === "true";
       chip.setAttribute("aria-pressed", String(!on));
       if (on) selected.delete(s.source); else selected.add(s.source);
+      setTargets([...selected]); // persist
     });
     targets.append(chip);
   }
@@ -322,6 +326,14 @@ function renderQueue(container: HTMLElement) {
     container.append(empty);
     return;
   }
+  const resolved = items.filter((i) => i.status !== "queued").length;
+  if (resolved > 0) {
+    const bar = el("div", "qclearbar");
+    const clear = el("button", "dbtn", `Clear ${resolved} resolved`) as HTMLButtonElement;
+    clear.addEventListener("click", () => clearResolved());
+    bar.append(clear);
+    container.append(bar);
+  }
   for (const item of items) renderDraftCard(container, item);
 }
 
@@ -355,10 +367,17 @@ function renderDraftCard(container: HTMLElement, item: QueueItem) {
     copy.addEventListener("click", async () => { await navigator.clipboard?.writeText(body.value).catch(() => {}); copy.textContent = "Copied ✓"; window.setTimeout(() => (copy.textContent = "Copy"), 1500); });
     actions.append(approve, reject, copy);
     card.append(actions);
-  } else if (item.status === "approved") {
-    const pv = el("div", "privacy");
-    pv.append(el("span", "dot"), el("span", undefined, "Approved — paste into the client to post. Help Me never posts on its own."));
-    card.append(pv);
+  } else {
+    const row = el("div", "dactions");
+    if (item.status === "approved") {
+      const pv = el("div", "privacy");
+      pv.append(el("span", "dot"), el("span", undefined, "Approved — paste into the client to post. Help Me never posts on its own."));
+      card.append(pv);
+    }
+    const del = el("button", "dbtn", "Remove") as HTMLButtonElement;
+    del.addEventListener("click", () => removeQueued(item.id));
+    row.append(del);
+    card.append(row);
   }
   container.append(card);
 }
@@ -424,6 +443,7 @@ function setActive(id: string) {
   btn.scrollIntoView({ inline: "nearest", block: "nearest", behavior: "smooth" });
   views.querySelectorAll<HTMLElement>(".view").forEach((v) => v.classList.toggle("active", v.id === `view-${id}`));
   activeView = id;
+  setLastTab(id); // persist
   if (id === "queue" && queueBody) renderQueue(queueBody); // refresh on open
 }
 
@@ -441,7 +461,17 @@ window.setInterval(() => {
   while (feed.childElementCount > 14) feed.lastElementChild?.remove();
 }, 4500);
 
+// Hydrate persisted state, then restore the last tab and queue.
+const validTabs = new Set(navItems.map((n) => n.id));
+Promise.all([hydrateQueue(), hydratePrefs()]).then(() => {
+  refreshQueueBadge();
+  if (queueBody) renderQueue(queueBody);
+  const last = getLastTab();
+  requestAnimationFrame(() => setActive(last && validTabs.has(last) ? last : "ask"));
+});
+// paint immediately so it's not blank while storage resolves
 requestAnimationFrame(() => setActive("ask"));
+
 window.addEventListener("resize", () => {
   const cur = navButtons.find((b) => b.getAttribute("aria-selected") === "true");
   if (cur) { indicator.style.transform = `translateX(${cur.offsetLeft}px)`; indicator.style.width = `${cur.offsetWidth}px`; }

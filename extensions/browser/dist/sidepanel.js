@@ -803,13 +803,41 @@ function localConfirmations(query) {
   return { count: hits.length, sources: [...new Set(hits.map((h) => h.source))] };
 }
 
+// src/store.ts
+var mem = {};
+var hasChrome = typeof chrome !== "undefined" && !!chrome.storage?.local;
+async function load(key, fallback) {
+  if (!hasChrome) return key in mem ? mem[key] : fallback;
+  return new Promise((resolve) => {
+    chrome.storage.local.get(key, (res) => resolve(res?.[key] ?? fallback));
+  });
+}
+function save(key, value) {
+  if (!hasChrome) {
+    mem[key] = value;
+    return;
+  }
+  chrome.storage.local.set({ [key]: value });
+}
+
 // src/queue.ts
+var KEY = "helpme.queue.v1";
 var items = [];
 var listeners2 = /* @__PURE__ */ new Set();
 var seq = 0;
+var ready = false;
+async function hydrate() {
+  items = await load(KEY, []);
+  ready = true;
+  emit();
+}
+function persist() {
+  save(KEY, items);
+}
 function enqueue(input) {
   const item = { ...input, id: `q_${Date.now()}_${seq++}`, createdAt: Date.now(), status: "queued" };
   items.unshift(item);
+  persist();
   emit();
   return item;
 }
@@ -817,6 +845,7 @@ function setStatus(id, status) {
   const it = items.find((i) => i.id === id);
   if (it) {
     it.status = status;
+    persist();
     emit();
   }
 }
@@ -824,8 +853,19 @@ function updateBody(id, body) {
   const it = items.find((i) => i.id === id);
   if (it) {
     it.body = body;
+    persist();
     emit();
   }
+}
+function remove(id) {
+  items = items.filter((i) => i.id !== id);
+  persist();
+  emit();
+}
+function clearResolved() {
+  items = items.filter((i) => i.status === "queued");
+  persist();
+  emit();
 }
 function list() {
   return items;
@@ -838,6 +878,27 @@ function onChange(fn) {
 }
 function emit() {
   listeners2.forEach((fn) => fn());
+}
+
+// src/prefs.ts
+var KEY2 = "helpme.prefs.v1";
+var prefs = {};
+async function hydratePrefs() {
+  prefs = await load(KEY2, {});
+}
+function getTargets(fallback) {
+  return prefs.targets ?? fallback;
+}
+function setTargets(targets) {
+  prefs = { ...prefs, targets };
+  save(KEY2, prefs);
+}
+function getLastTab() {
+  return prefs.lastTab;
+}
+function setLastTab(lastTab) {
+  prefs = { ...prefs, lastTab };
+  save(KEY2, prefs);
 }
 
 // src/sidepanel.ts
@@ -944,10 +1005,11 @@ function buildAskView() {
   composer.append(ta);
   composer.append(el("div", "section-label", "Send to"));
   const targets = el("div", "targets");
-  const selected = new Set(connected.map((s) => s.source));
+  const savedTargets = getTargets(connected.map((s) => s.source));
+  const selected = new Set(savedTargets.filter((t) => connected.some((s) => s.source === t)));
   for (const s of connected) {
     const chip = el("button", "target");
-    chip.setAttribute("aria-pressed", "true");
+    chip.setAttribute("aria-pressed", String(selected.has(s.source)));
     chip.style.setProperty("--tc", meta(s.source).color);
     const led = el("span", "led");
     led.style.color = meta(s.source).color;
@@ -957,6 +1019,7 @@ function buildAskView() {
       chip.setAttribute("aria-pressed", String(!on));
       if (on) selected.delete(s.source);
       else selected.add(s.source);
+      setTargets([...selected]);
     });
     targets.append(chip);
   }
@@ -1143,6 +1206,14 @@ function renderQueue(container) {
     container.append(empty);
     return;
   }
+  const resolved = items2.filter((i) => i.status !== "queued").length;
+  if (resolved > 0) {
+    const bar = el("div", "qclearbar");
+    const clear = el("button", "dbtn", `Clear ${resolved} resolved`);
+    clear.addEventListener("click", () => clearResolved());
+    bar.append(clear);
+    container.append(bar);
+  }
   for (const item of items2) renderDraftCard(container, item);
 }
 function renderDraftCard(container, item) {
@@ -1178,10 +1249,17 @@ function renderDraftCard(container, item) {
     });
     actions.append(approve, reject, copy);
     card.append(actions);
-  } else if (item.status === "approved") {
-    const pv = el("div", "privacy");
-    pv.append(el("span", "dot"), el("span", void 0, "Approved \u2014 paste into the client to post. Help Me never posts on its own."));
-    card.append(pv);
+  } else {
+    const row = el("div", "dactions");
+    if (item.status === "approved") {
+      const pv = el("div", "privacy");
+      pv.append(el("span", "dot"), el("span", void 0, "Approved \u2014 paste into the client to post. Help Me never posts on its own."));
+      card.append(pv);
+    }
+    const del = el("button", "dbtn", "Remove");
+    del.addEventListener("click", () => remove(item.id));
+    row.append(del);
+    card.append(row);
   }
   container.append(card);
 }
@@ -1237,6 +1315,7 @@ function setActive(id) {
   btn.scrollIntoView({ inline: "nearest", block: "nearest", behavior: "smooth" });
   views.querySelectorAll(".view").forEach((v) => v.classList.toggle("active", v.id === `view-${id}`));
   activeView = id;
+  setLastTab(id);
   if (id === "queue" && queueBody) renderQueue(queueBody);
 }
 window.setInterval(() => {
@@ -1251,6 +1330,13 @@ window.setInterval(() => {
   feed.prepend(renderMsg(liveFor(activeView), activeView, true));
   while (feed.childElementCount > 14) feed.lastElementChild?.remove();
 }, 4500);
+var validTabs = new Set(navItems.map((n) => n.id));
+Promise.all([hydrate(), hydratePrefs()]).then(() => {
+  refreshQueueBadge();
+  if (queueBody) renderQueue(queueBody);
+  const last = getLastTab();
+  requestAnimationFrame(() => setActive(last && validTabs.has(last) ? last : "ask"));
+});
 requestAnimationFrame(() => setActive("ask"));
 window.addEventListener("resize", () => {
   const cur = navButtons.find((b) => b.getAttribute("aria-selected") === "true");
