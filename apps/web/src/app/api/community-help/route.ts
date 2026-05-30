@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { communityHelp, mockWorkspaceContext } from "@help-me-comms/core";
-import { createDefaultMockAdapters } from "@help-me-comms/adapters";
+import { createAdapters } from "@help-me-comms/adapters";
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
       returnMode: body.return_mode,
     },
     mockWorkspaceContext,
-    createDefaultMockAdapters(),
+    createAdapters(process.env),
   );
 
   return Response.json(answer);

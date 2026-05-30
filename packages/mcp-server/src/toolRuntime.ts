@@ -5,9 +5,9 @@ import {
   queueAction,
   type ActionType,
 } from "@help-me-comms/core";
-import { createDefaultMockAdapters } from "@help-me-comms/adapters";
+import { createAdapters } from "@help-me-comms/adapters";
 
-const adapters = createDefaultMockAdapters();
+const adapters = createAdapters(process.env);
 
 export async function getWorkspaceContextTool(args: { workspace_id?: string }) {
   return {
