@@ -16,12 +16,13 @@ export function initParallax(): void {
   window.addEventListener("pointerleave", () => { tx = 0; ty = 0; });
 
   const loop = () => {
-    cx += (tx - cx) * 0.08;
-    cy += (ty - cy) * 0.08;
-    stage.style.setProperty("--ry", (cx * 6).toFixed(2) + "deg");
-    stage.style.setProperty("--rx", (-cy * 6).toFixed(2) + "deg");
-    root.style.setProperty("--px", (cx * -16).toFixed(1) + "px");
-    root.style.setProperty("--py", (cy * -16).toFixed(1) + "px");
+    cx += (tx - cx) * 0.05;
+    cy += (ty - cy) * 0.05;
+    // Subtle float: gentle tilt + small shader drift (not a dramatic follow).
+    stage.style.setProperty("--ry", (cx * 2).toFixed(2) + "deg");
+    stage.style.setProperty("--rx", (-cy * 2).toFixed(2) + "deg");
+    root.style.setProperty("--px", (cx * -6).toFixed(1) + "px");
+    root.style.setProperty("--py", (cy * -6).toFixed(1) + "px");
     requestAnimationFrame(loop);
   };
   requestAnimationFrame(loop);
