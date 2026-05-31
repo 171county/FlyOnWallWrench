@@ -20,6 +20,9 @@ import { addSignal, localConfirmations } from "./signals";
 import { applyEdit, clearResolved, enqueue, hydrate as hydrateQueue, list as queueList, onChange as onQueueChange, pendingCount, remove as removeQueued, setStatus, updateBody, type QueueItem } from "./queue";
 import { getLastTab, getTargets, hydratePrefs, setLastTab, setTargets } from "./prefs";
 import { getSettings, hydrateSettings, onSettingsChange, setSettings } from "./settings";
+import { SITE_INFO } from "./pageReaders";
+import { connect, hydrateConnections, isConnected } from "./connections";
+import { readActiveTab } from "./liveReader";
 import { addCustom, hydrateCustom, listCustom, onCustomChange, removeCustom, type CustomKind, type CustomSource } from "./customSources";
 import { CustomSourceAdapter } from "@help-me-comms/adapters";
 
@@ -287,14 +290,45 @@ function buildSourceView(cap: SourceCapabilities): HTMLElement {
   }
 
   const fhead = el("div", "feedhead");
-  const live = el("span", "live"); live.append(el("span", "pulse"), document.createTextNode("Live"));
+  const live = el("span", "live"); live.append(el("span", "pulse"), document.createTextNode("Demo"));
   fhead.append(el("span", "section-label", `${m.label} community feed`), live);
 
   const feed = el("div", "feed");
   for (const msg of recentFor(kind)) feed.append(renderMsg(msg, kind));
   feedEls[kind] = feed;
 
-  view.append(head, fhead, feed);
+  // Live "read this page" control — only for sites FOTW² can scrape (Discord/Reddit/Steam/GitHub)
+  if (kind in SITE_INFO) {
+    const bar = el("div", "livebar");
+    const status = el("span", "livestatus", "");
+    const btn = el("button", "btn2 go", "Read this page ✦") as HTMLButtonElement;
+    btn.addEventListener("click", async () => {
+      btn.disabled = true; status.textContent = "Reading…";
+      if (!isConnected(kind)) {
+        const ok = await connect(kind);
+        if (!ok) { status.textContent = "Connect declined"; btn.disabled = false; return; }
+      }
+      const res = await readActiveTab();
+      btn.disabled = false;
+      if (!res.ok) {
+        status.textContent =
+          res.reason === "not_on_site" ? `Open a ${m.label} tab, then read` :
+          res.reason === "no_permission" ? "Not connected yet" :
+          res.reason === "blocked" ? "Page blocked the read" : "No active tab";
+        return;
+      }
+      if (res.site !== kind) { status.textContent = `That tab is ${SITE_INFO[res.site]?.label ?? res.site}, not ${m.label}`; return; }
+      feed.innerHTML = "";
+      if (!res.messages.length) { status.textContent = "No messages found on this page"; return; }
+      for (const sm of res.messages) feed.append(renderMsg({ author: sm.author, role: "player", body: sm.body, ago: sm.ago || "now", sentiment: "neu", up: 0 }, kind, false));
+      live.innerHTML = ""; live.append(el("span", "pulse"), document.createTextNode("Live"));
+      status.textContent = `${res.messages.length} live messages from your ${m.label} session`;
+    });
+    bar.append(btn, status);
+    view.append(head, bar, fhead, feed);
+  } else {
+    view.append(head, fhead, feed);
+  }
   return view;
 }
 
@@ -662,7 +696,7 @@ function scheduleTrickle() {
 onSettingsChange(scheduleTrickle);
 
 // Hydrate persisted state, then build nav and restore the last tab + queue.
-Promise.all([hydrateQueue(), hydratePrefs(), hydrateCustom(), hydrateSettings()]).then(() => {
+Promise.all([hydrateQueue(), hydratePrefs(), hydrateCustom(), hydrateSettings(), hydrateConnections()]).then(() => {
   scheduleTrickle();
   rebuildNav();
   if (queueBody) renderQueue(queueBody);

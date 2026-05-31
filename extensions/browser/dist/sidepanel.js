@@ -89,8 +89,8 @@ var candidateByIntent = {
 };
 function scopeSources(intent, context) {
   const plan = candidateByIntent[intent];
-  const connected2 = new Set(context.connectedSources.filter((s) => s.read).map((s) => s.source));
-  const onlyConnected = (sources2) => sources2.filter((source) => connected2.has(source));
+  const connected3 = new Set(context.connectedSources.filter((s) => s.read).map((s) => s.source));
+  const onlyConnected = (sources2) => sources2.filter((source) => connected3.has(source));
   return {
     required: onlyConnected(plan.required),
     optional: onlyConnected(plan.optional),
@@ -1072,12 +1072,149 @@ function emit2() {
   listeners3.forEach((fn) => fn());
 }
 
-// src/customSources.ts
-var KEY4 = "helpme.custom.v1";
-var sources = [];
+// src/pageReaders.ts
+function pageScrapeFn(site) {
+  const txt = (el2) => (el2?.textContent || "").trim();
+  const clip = (s, n = 280) => s.replace(/\s+/g, " ").trim().slice(0, n);
+  const out = [];
+  const push = (author, body, ago = "") => {
+    body = clip(body);
+    if (body && body.length > 1) out.push({ author: author || "user", body, ago });
+  };
+  try {
+    if (site === "discord") {
+      const items2 = document.querySelectorAll('[id^="chat-messages-"], [data-list-item-id^="chat-messages"]');
+      let lastAuthor = "";
+      items2.forEach((it) => {
+        const a = it.querySelector('[class*="username"]');
+        const author = txt(a) || lastAuthor;
+        if (txt(a)) lastAuthor = author;
+        const content = it.querySelector('[id^="message-content-"], [class*="messageContent"]');
+        push(author, txt(content));
+      });
+    } else if (site === "reddit") {
+      document.querySelectorAll("shreddit-post").forEach((p) => {
+        const title = p.getAttribute("post-title") || txt(p.querySelector('[slot="title"]'));
+        const author = p.getAttribute("author") || "redditor";
+        push(author, title);
+      });
+      document.querySelectorAll('[slot="comment"], [data-testid="comment"]').forEach((c) => {
+        push("redditor", txt(c));
+      });
+    } else if (site === "steam") {
+      document.querySelectorAll(".apphub_Card, .commentthread_comment, .forum_op, .topic_message").forEach((card) => {
+        const author = txt(card.querySelector(".apphub_CardContentAuthorName, .commentthread_author_link, .forum_op_author")) || "player";
+        const body = txt(card.querySelector(".apphub_CardTextContent, .commentthread_comment_text, .content, .forum_op_text"));
+        push(author, body);
+      });
+    } else if (site === "github") {
+      document.querySelectorAll(".js-comment-body, .markdown-body, .comment-body").forEach((c) => {
+        push("contributor", txt(c));
+      });
+      const t = txt(document.querySelector(".js-issue-title, .markdown-title, bdi.js-issue-title"));
+      if (t) out.unshift({ author: "issue", body: clip(t), ago: "" });
+    } else {
+      document.querySelectorAll("article p, .post p, main p").forEach((p) => push("page", txt(p)));
+    }
+  } catch {
+  }
+  const seen = /* @__PURE__ */ new Set();
+  return out.filter((m) => {
+    const k = m.body.slice(0, 60);
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  }).slice(0, 25);
+}
+var SITE_INFO = {
+  discord: { scrapeKey: "discord", match: /(^|\.)discord\.com$/, origin: "https://discord.com/*", label: "Discord" },
+  reddit: { scrapeKey: "reddit", match: /(^|\.)reddit\.com$/, origin: "https://*.reddit.com/*", label: "Reddit" },
+  steam_reviews: { scrapeKey: "steam", match: /(^|\.)steamcommunity\.com$|(^|\.)steampowered\.com$/, origin: "https://*.steamcommunity.com/*", label: "Steam" },
+  github_issues: { scrapeKey: "github", match: /(^|\.)github\.com$/, origin: "https://github.com/*", label: "GitHub" }
+};
+
+// src/connections.ts
+var KEY4 = "helpme.connections.v1";
+var connected = /* @__PURE__ */ new Set();
 var listeners4 = /* @__PURE__ */ new Set();
+async function hydrateConnections() {
+  const saved = await load(KEY4, []);
+  connected = new Set(saved);
+  if (typeof chrome !== "undefined" && chrome.permissions?.getAll) {
+    await new Promise((resolve) => {
+      chrome.permissions.getAll((p) => {
+        const origins = new Set(p.origins ?? []);
+        for (const [src, info] of Object.entries(SITE_INFO)) {
+          if (origins.has(info.origin)) connected.add(src);
+          else connected.delete(src);
+        }
+        resolve();
+      });
+    });
+    save(KEY4, [...connected]);
+  }
+}
+function isConnected(src) {
+  return connected.has(src);
+}
+async function connect(src) {
+  const info = SITE_INFO[src];
+  if (!info || typeof chrome === "undefined" || !chrome.permissions?.request) return false;
+  const granted = await new Promise((resolve) => {
+    chrome.permissions.request({ origins: [info.origin] }, (ok) => resolve(!!ok));
+  });
+  if (granted) {
+    connected.add(src);
+    save(KEY4, [...connected]);
+    emit3();
+  }
+  return granted;
+}
+function emit3() {
+  listeners4.forEach((fn) => fn());
+}
+
+// src/liveReader.ts
+function siteForUrl(url) {
+  let host = "";
+  try {
+    host = new URL(url).host;
+  } catch {
+    return void 0;
+  }
+  for (const [src, info] of Object.entries(SITE_INFO)) if (info.match.test(host)) return src;
+  return void 0;
+}
+async function readActiveTab() {
+  if (typeof chrome === "undefined" || !chrome.tabs?.query) return { ok: false, reason: "no_tab" };
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!tab?.id || !tab.url) return { ok: false, reason: "no_tab" };
+  const site = siteForUrl(tab.url);
+  if (!site) return { ok: false, reason: "not_on_site" };
+  const info = SITE_INFO[site];
+  const hasPerm = await new Promise(
+    (resolve) => chrome.permissions.contains({ origins: [info.origin] }, (ok) => resolve(!!ok))
+  );
+  if (!hasPerm) return { ok: false, reason: "no_permission", site };
+  try {
+    const [res] = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: pageScrapeFn,
+      args: [info.scrapeKey]
+    });
+    const messages = res?.result ?? [];
+    return { ok: true, site, url: tab.url, messages };
+  } catch {
+    return { ok: false, reason: "blocked", site };
+  }
+}
+
+// src/customSources.ts
+var KEY5 = "helpme.custom.v1";
+var sources = [];
+var listeners5 = /* @__PURE__ */ new Set();
 async function hydrateCustom() {
-  sources = await load(KEY4, []);
+  sources = await load(KEY5, []);
 }
 function listCustom() {
   return sources;
@@ -1086,20 +1223,20 @@ function addCustom(input) {
   const id = `custom_${input.label.toLowerCase().replace(/[^a-z0-9]+/g, "_")}_${Date.now().toString(36)}`;
   const src = { ...input, id };
   sources = [...sources, src];
-  save(KEY4, sources);
-  emit3();
+  save(KEY5, sources);
+  emit4();
   return src;
 }
 function removeCustom(id) {
   sources = sources.filter((s) => s.id !== id);
-  save(KEY4, sources);
-  emit3();
+  save(KEY5, sources);
+  emit4();
 }
 function onCustomChange(fn) {
-  listeners4.add(fn);
+  listeners5.add(fn);
 }
-function emit3() {
-  listeners4.forEach((fn) => fn());
+function emit4() {
+  listeners5.forEach((fn) => fn());
 }
 
 // src/sidepanel.ts
@@ -1125,7 +1262,7 @@ var SENT = { pos: "#2ee06a", neu: "#7d88c8", neg: "#ff7a3c", mixed: "#e0964a" };
 var workspace = mockWorkspaceContext;
 var allAdapters = createDefaultMockAdapters();
 var adapterFor = (kind) => allAdapters.find((a) => a.kind === kind) ?? new BaseMockAdapter(kind);
-var connected = workspace.connectedSources.filter((s) => s.read);
+var connected2 = workspace.connectedSources.filter((s) => s.read);
 function el(tag, cls, text) {
   const node = document.createElement(tag);
   if (cls) node.className = cls;
@@ -1208,9 +1345,9 @@ function buildAskView() {
   composer.append(ta);
   composer.append(el("div", "section-label", "Send to"));
   const targets = el("div", "targets");
-  const savedTargets = getTargets(connected.map((s) => s.source));
-  const selected = new Set(savedTargets.filter((t) => connected.some((s) => s.source === t)));
-  for (const s of connected) {
+  const savedTargets = getTargets(connected2.map((s) => s.source));
+  const selected = new Set(savedTargets.filter((t) => connected2.some((s) => s.source === t)));
+  for (const s of connected2) {
     const chip = el("button", "target");
     chip.setAttribute("aria-pressed", String(selected.has(s.source)));
     chip.style.setProperty("--tc", meta(s.source).color);
@@ -1373,16 +1510,55 @@ function buildSourceView(cap) {
   }
   const fhead = el("div", "feedhead");
   const live = el("span", "live");
-  live.append(el("span", "pulse"), document.createTextNode("Live"));
+  live.append(el("span", "pulse"), document.createTextNode("Demo"));
   fhead.append(el("span", "section-label", `${m.label} community feed`), live);
   const feed = el("div", "feed");
   for (const msg of recentFor(kind)) feed.append(renderMsg(msg, kind));
   feedEls[kind] = feed;
-  view.append(head, fhead, feed);
+  if (kind in SITE_INFO) {
+    const bar = el("div", "livebar");
+    const status = el("span", "livestatus", "");
+    const btn = el("button", "btn2 go", "Read this page \u2726");
+    btn.addEventListener("click", async () => {
+      btn.disabled = true;
+      status.textContent = "Reading\u2026";
+      if (!isConnected(kind)) {
+        const ok = await connect(kind);
+        if (!ok) {
+          status.textContent = "Connect declined";
+          btn.disabled = false;
+          return;
+        }
+      }
+      const res = await readActiveTab();
+      btn.disabled = false;
+      if (!res.ok) {
+        status.textContent = res.reason === "not_on_site" ? `Open a ${m.label} tab, then read` : res.reason === "no_permission" ? "Not connected yet" : res.reason === "blocked" ? "Page blocked the read" : "No active tab";
+        return;
+      }
+      if (res.site !== kind) {
+        status.textContent = `That tab is ${SITE_INFO[res.site]?.label ?? res.site}, not ${m.label}`;
+        return;
+      }
+      feed.innerHTML = "";
+      if (!res.messages.length) {
+        status.textContent = "No messages found on this page";
+        return;
+      }
+      for (const sm of res.messages) feed.append(renderMsg({ author: sm.author, role: "player", body: sm.body, ago: sm.ago || "now", sentiment: "neu", up: 0 }, kind, false));
+      live.innerHTML = "";
+      live.append(el("span", "pulse"), document.createTextNode("Live"));
+      status.textContent = `${res.messages.length} live messages from your ${m.label} session`;
+    });
+    bar.append(btn, status);
+    view.append(head, bar, fhead, feed);
+  } else {
+    view.append(head, fhead, feed);
+  }
   return view;
 }
 var pulseFeed = null;
-var pulseRotor = connected.map((s) => ({ kind: s.source }));
+var pulseRotor = connected2.map((s) => ({ kind: s.source }));
 var pulseTick = 0;
 function buildPulseView() {
   const view = el("div", "view");
@@ -1392,7 +1568,7 @@ function buildPulseView() {
   live.append(el("span", "pulse"), document.createTextNode("Live"));
   head.append(el("span", "section-label", "Pulse \xB7 every connected source, interleaved"), live);
   const feed = el("div", "feed");
-  const seed = connected.map((s) => ({ kind: s.source, msg: recentFor(s.source)[0] }));
+  const seed = connected2.map((s) => ({ kind: s.source, msg: recentFor(s.source)[0] }));
   for (const s of seed) feed.append(renderMsg(s.msg, s.kind, false, true));
   pulseFeed = feed;
   view.append(head, feed);
@@ -1655,7 +1831,7 @@ function rebuildNav() {
   navItems = [
     { id: "ask", label: "Ask", accent: "#4cc2ff" },
     { id: "pulse", label: "Pulse", accent: "#2ee06a" },
-    ...connected.map((s) => ({ id: s.source, label: meta(s.source).label, accent: meta(s.source).color })),
+    ...connected2.map((s) => ({ id: s.source, label: meta(s.source).label, accent: meta(s.source).color })),
     ...custom.map((c) => ({ id: c.id, label: c.label, accent: c.color })),
     { id: "queue", label: "Queue", accent: "#e0964a" },
     { id: "add", label: "+ Add", accent: "#7d88c8" },
@@ -1665,7 +1841,7 @@ function rebuildNav() {
   views.append(
     buildAskView(),
     buildPulseView(),
-    ...connected.map((s) => buildSourceView(s)),
+    ...connected2.map((s) => buildSourceView(s)),
     ...custom.map((c) => buildCustomFeedView(c)),
     buildQueueView(),
     buildAddView(),
@@ -1727,7 +1903,7 @@ function scheduleTrickle() {
   trickleTimer = window.setInterval(trickleTick, getSettings().trickleMs);
 }
 onSettingsChange(scheduleTrickle);
-Promise.all([hydrate(), hydratePrefs(), hydrateCustom(), hydrateSettings()]).then(() => {
+Promise.all([hydrate(), hydratePrefs(), hydrateCustom(), hydrateSettings(), hydrateConnections()]).then(() => {
   scheduleTrickle();
   rebuildNav();
   if (queueBody) renderQueue(queueBody);
