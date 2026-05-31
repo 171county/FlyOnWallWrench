@@ -573,3 +573,26 @@ body::after {
 .setrow label { font-size: 12.5px; color: var(--muted); flex: 1; }
 .toneselect { background: rgba(3,6,14,.5); color: var(--ink); border: 1px solid rgba(255,255,255,.10); border-radius: 9px; padding: 6px 10px; font: inherit; font-size: 12px; outline: none; cursor: pointer; }
 .toneselect:focus { border-color: rgba(76,194,255,.5); }
+
+/* ============================================================
+   v11 — make the side panel scroll (brand+tabs fixed, content scrolls)
+   ============================================================ */
+body.panel { height: 100vh; overflow: hidden; }
+body.panel .shell { height: 100vh; min-height: 0; overflow: hidden; }
+body.panel .stage { flex: 1; min-height: 0; }            /* fill remaining height */
+body.panel .brand, body.panel .navwrap { flex: 0 0 auto; } /* stay pinned */
+body.panel .views {
+  flex: 1; min-height: 0;
+  overflow-y: auto; overflow-x: hidden;
+  padding-right: 4px;                                     /* room for the scrollbar */
+  scrollbar-width: thin;
+  scrollbar-color: var(--copper-lit, #e6a062) transparent;
+}
+/* visible, on-brand scrollbar */
+body.panel .views::-webkit-scrollbar { width: 10px; }
+body.panel .views::-webkit-scrollbar-track { background: rgba(255,255,255,.03); border-radius: 999px; }
+body.panel .views::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--copper-lit, #e6a062), var(--copper, #c77b3e));
+  border-radius: 999px; border: 2px solid transparent; background-clip: padding-box;
+}
+body.panel .views::-webkit-scrollbar-thumb:hover { background: var(--copper-lit, #e6a062); }
