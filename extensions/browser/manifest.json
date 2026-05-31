@@ -1,12 +1,12 @@
 {
   "manifest_version": 3,
-  "name": "Help Me Comms Companion",
-  "description": "Ask Help Me about the visible page, selected text, or current community thread. Drafts require approval.",
+  "name": "FOTW² — Fly On The Wall",
+  "description": "Ask FOTW² about the visible page, selected text, or current community thread. Drafts require approval.",
   "version": "0.1.0",
   "permissions": ["activeTab", "scripting", "storage", "sidePanel"],
   "host_permissions": [],
   "action": {
-    "default_title": "Help Me",
+    "default_title": "FOTW²",
     "default_popup": "popup.html"
   },
   "background": {

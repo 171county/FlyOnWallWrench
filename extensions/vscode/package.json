@@ -1,7 +1,7 @@
 {
   "name": "help-me-comms-vscode",
-  "displayName": "Help Me Comms",
-  "description": "Ask Help Me about selected logs, code, config, or community evidence. Local edits require approval.",
+  "displayName": "FOTW² — Fly On The Wall",
+  "description": "Ask FOTW² about selected logs, code, config, or community evidence. Local edits require approval.",
   "version": "0.1.0",
   "publisher": "local-dev",
   "license": "MIT",
@@ -18,12 +18,12 @@
   "main": "./dist/extension.js",
   "contributes": {
     "commands": [
-      { "command": "helpMe.askAboutSelection", "title": "Help Me: Ask About Selection" },
-      { "command": "helpMe.explainCrashLog", "title": "Help Me: Explain Crash Log" },
-      { "command": "helpMe.createIssueDraft", "title": "Help Me: Create Issue Draft" }
+      { "command": "helpMe.askAboutSelection", "title": "FOTW²: Ask About Selection" },
+      { "command": "helpMe.explainCrashLog", "title": "FOTW²: Explain Crash Log" },
+      { "command": "helpMe.createIssueDraft", "title": "FOTW²: Create Issue Draft" }
     ],
     "configuration": {
-      "title": "Help Me Comms",
+      "title": "FOTW²",
       "properties": {
         "helpMe.sendSelectedTextOnly": {
           "type": "boolean",

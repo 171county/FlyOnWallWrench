@@ -16,7 +16,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 function getPanel(): vscode.WebviewPanel {
   if (panel) return panel;
-  panel = vscode.window.createWebviewPanel("helpMeComms", "Help Me Comms", vscode.ViewColumn.Beside, {
+  panel = vscode.window.createWebviewPanel("helpMeComms", "FOTW²", vscode.ViewColumn.Beside, {
     enableScripts: true,
     retainContextWhenHidden: true,
   });
@@ -178,9 +178,9 @@ function renderHtml(webview: vscode.Webview): string {
     `<style>${style}</style></head><body>`,
     "<canvas id=\"bg\"></canvas>",
     "<main>",
-    "<div class=\"brand\"><div class=\"logo\">&lt;/&gt;</div><div><div class=\"kicker\">FlyOnWall &middot; Comms</div><div class=\"title\">Help Me Comms</div></div></div>",
+    "<div class=\"brand\"><div class=\"logo\">&lt;/&gt;</div><div><div class=\"kicker\">Fly On The Wall &middot; Squared</div><div class=\"title\">FOTW\\u00b2</div></div></div>",
     "<div class=\"head glass\"><span class=\"led\"></span> Sends selected text only · no files edited, no commands run</div>",
-    "<div id=\"out\"><div class=\"card glass\"><div class=\"muted\">Select a log, error, or snippet, then run <b>Help Me: Ask About Selection</b>.</div></div></div>",
+    "<div id=\"out\"><div class=\"card glass\"><div class=\"muted\">Select a log, error, or snippet, then run <b>FOTW\\u00b2: Ask About Selection</b>.</div></div></div>",
     "</main>",
     `<script id="v" type="x-shader/x-vertex" nonce="${n}">${vert}</script>`,
     `<script id="f" type="x-shader/x-fragment" nonce="${n}">${frag}</script>`,
