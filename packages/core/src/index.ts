@@ -8,4 +8,6 @@ export * from "./actions.js";
 export * from "./providers.js";
 export * from "./communityHelp.js";
 export * from "./drafts.js";
+export * from "./wrench.js";
+export * from "./correlate.js";
 export * from "./mockWorkspace.js";

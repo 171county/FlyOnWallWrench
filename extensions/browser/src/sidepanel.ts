@@ -23,6 +23,9 @@ import { getSettings, hydrateSettings, onSettingsChange, setSettings } from "./s
 import { SITE_INFO } from "./pageReaders";
 import { connect, hydrateConnections, isConnected } from "./connections";
 import { readActiveTab } from "./liveReader";
+import { correlate, type WrenchFinding, type WrenchId } from "@help-me-comms/core";
+import { createMockWrenchBridges, FOTW_STATION, MOD_STATION, DEF_STATION, MYNE_STATION } from "@help-me-comms/adapters";
+import { hydrateRack, isPaired, listPaired, togglePair } from "./rack";
 import { addCustom, hydrateCustom, listCustom, onCustomChange, removeCustom, type CustomKind, type CustomSource } from "./customSources";
 import { CustomSourceAdapter } from "@help-me-comms/adapters";
 
@@ -558,6 +561,122 @@ function buildAddView(): HTMLElement {
 let navItems: NavItem[] = [];
 let navButtons: HTMLButtonElement[] = [];
 
+// ---------- The Rack: the wrench cockpit + cross-wrench spine ----------
+const WRENCH_STATIONS = [FOTW_STATION, MOD_STATION, DEF_STATION, MYNE_STATION];
+const wrenchBridges = createMockWrenchBridges();
+let rackThreadHost: HTMLElement | null = null;
+
+function buildRackView(): HTMLElement {
+  const view = el("div", "view");
+  view.id = "view-rack";
+  const rack = el("div", "rack");
+
+  rack.append(el("div", "section-label", "Your wrenches · pair the ones you run"));
+  const pegboard = el("div", "pegboard");
+  for (const st of WRENCH_STATIONS) {
+    const card = el("button", "wrenchcard") as HTMLButtonElement;
+    card.style.setProperty("--wc", st.color);
+    card.setAttribute("aria-pressed", String(isPaired(st.id)));
+    card.setAttribute("data-available", String(st.available));
+    const name = el("div", "wname");
+    const ico = el("div", "wico", st.label.charAt(0)); ico.style.background = st.color;
+    name.append(ico, document.createTextNode(st.label));
+    card.append(name, el("div", "wtag", st.tagline));
+    const state = el("div", `wstate ${isPaired(st.id) ? "on" : "off"}`, st.id === "fotw" ? "cockpit" : (isPaired(st.id) ? "paired" : "tap to pair"));
+    card.append(state);
+    card.addEventListener("click", () => {
+      togglePair(st.id);
+      card.setAttribute("aria-pressed", String(isPaired(st.id)));
+      state.className = `wstate ${isPaired(st.id) ? "on" : "off"}`;
+      state.textContent = st.id === "fotw" ? "cockpit" : (isPaired(st.id) ? "paired" : "tap to pair");
+    });
+    pegboard.append(card);
+  }
+  rack.append(pegboard);
+
+  // the threaded story
+  rack.append(el("div", "section-label", "Cross-wrench thread"));
+  const composer = el("div", "composer glass");
+  const ta = el("textarea") as HTMLTextAreaElement;
+  ta.placeholder = "What are you chasing? e.g. 'crashing at the factory boss'";
+  const bar = el("div", "composer-bar");
+  bar.append(el("span", "hint", "Threads one story across your paired wrenches"));
+  const btn = el("button", "primary", "Thread it ✦") as HTMLButtonElement;
+  bar.append(btn);
+  composer.append(ta, bar);
+
+  const threadHost = el("div", "result");
+  rackThreadHost = threadHost;
+  threadHost.append(emptyThread());
+
+  btn.addEventListener("click", async () => {
+    const topic = ta.value.trim();
+    if (!topic) { ta.focus(); return; }
+    btn.disabled = true;
+    threadHost.innerHTML = "";
+    const loading = el("div", "card glass lux");
+    loading.append(el("div", "skel w40"), el("div", "skel w90"), el("div", "skel w70"));
+    threadHost.append(loading);
+    try {
+      // FOTW² (the cockpit) contributes the community signal as the lead;
+      // the paired wrenches add cause/fix/economy.
+      const paired = new Set(listPaired());
+      const help = await communityHelp({ userMessage: topic, sourcePolicy: "auto_scope_connected_sources" }, workspace, allAdapters);
+      const fotwBridge = {
+        id: "fotw" as WrenchId,
+        station: FOTW_STATION,
+        findings: async (): Promise<WrenchFinding[]> => help.evidence?.length
+          ? [{ wrench: "fotw" as WrenchId, kind: "community_signal", title: "Community signal", detail: `${help.answer.split("\n")[0]} (${Math.round((help.confidence ?? 0) * 100)}% across ${help.sourcesUsed.join(", ")})`, weight: help.confidence ?? 0.5 }]
+          : [],
+      };
+      const active = [fotwBridge, ...wrenchBridges.filter((b) => paired.has(b.id))];
+      const thread = await correlate(topic, active);
+      threadHost.innerHTML = "";
+      threadHost.append(renderThread(thread));
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  rack.append(composer, threadHost);
+  view.append(rack);
+  return view;
+}
+
+function emptyThread(): HTMLElement {
+  const e = el("div", "emptythread");
+  e.append(document.createTextNode("Pair your wrenches above, then thread a topic. FOTW² brings the community signal; ModWrench the likely cause; DefWrench the fix; MyneWrench the impact — one story, not six screens."));
+  return e;
+}
+
+const WSTATION: Record<string, { label: string; color: string }> = {
+  fotw: { label: "FOTW²", color: "#7d88c8" },
+  mod: { label: "ModWrench", color: "#4cc2ff" },
+  def: { label: "DefWrench", color: "#e0964a" },
+  myne: { label: "MyneWrench", color: "#2ee06a" },
+};
+
+function renderThread(thread: { topic: string; findings: WrenchFinding[]; story: string; contributors: string[]; confidence: number }): HTMLElement {
+  const card = el("div", "thread card glass lux");
+  if (!thread.findings.length) { card.append(emptyThread()); return card; }
+  card.append(el("div", "tlead", `“${thread.topic}” — threaded across ${thread.contributors.length} wrench${thread.contributors.length === 1 ? "" : "es"}`));
+  card.append(meterEl(thread.confidence));
+  const chain = el("div", "chain");
+  for (const f of thread.findings) {
+    const ws = WSTATION[f.wrench] ?? { label: f.wrench, color: "#9aa6c4" };
+    const link = el("div", "link");
+    link.style.setProperty("--lc", ws.color);
+    const node = el("div", "lnode", ws.label.charAt(0)); node.style.background = ws.color;
+    const body = el("div", "lbody");
+    body.append(el("div", "lwrench", ws.label), el("div", "ltitle", f.title), el("div", "ldetail", f.detail));
+    if (f.ref) body.append(el("span", "lref", f.ref));
+    link.append(node, body);
+    chain.append(link);
+  }
+  card.append(chain);
+  return card;
+}
+
 // ---------- Settings tab ----------
 function buildSettingsView(): HTMLElement {
   const view = el("div", "view");
@@ -613,6 +732,7 @@ function rebuildNav() {
   const custom = listCustom();
   navItems = [
     { id: "ask", label: "Ask", accent: "#4cc2ff" },
+    { id: "rack", label: "Rack", accent: "#7d88c8" },
     { id: "pulse", label: "Pulse", accent: "#2ee06a" },
     ...connected.map((s) => ({ id: s.source, label: meta(s.source).label, accent: meta(s.source).color })),
     ...custom.map((c) => ({ id: c.id, label: c.label, accent: c.color })),
@@ -624,6 +744,7 @@ function rebuildNav() {
   views.innerHTML = "";
   views.append(
     buildAskView(),
+    buildRackView(),
     buildPulseView(),
     ...connected.map((s) => buildSourceView(s)),
     ...custom.map((c) => buildCustomFeedView(c)),
@@ -696,7 +817,7 @@ function scheduleTrickle() {
 onSettingsChange(scheduleTrickle);
 
 // Hydrate persisted state, then build nav and restore the last tab + queue.
-Promise.all([hydrateQueue(), hydratePrefs(), hydrateCustom(), hydrateSettings(), hydrateConnections()]).then(() => {
+Promise.all([hydrateQueue(), hydratePrefs(), hydrateCustom(), hydrateSettings(), hydrateConnections(), hydrateRack()]).then(() => {
   scheduleTrickle();
   rebuildNav();
   if (queueBody) renderQueue(queueBody);

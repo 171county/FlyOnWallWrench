@@ -402,6 +402,40 @@ Really appreciate you flagging this \u2014 we'll keep you posted! \u{1F64F}`;
   return body;
 }
 
+// ../../packages/core/dist/correlate.js
+var ORDER = ["fotw", "mod", "def", "myne"];
+async function correlate(topic, bridges) {
+  const all = (await Promise.all(bridges.map((b) => b.findings(topic).catch(() => [])))).flat();
+  const findings = [...all].sort((a, b) => {
+    const oa = ORDER.indexOf(a.wrench), ob = ORDER.indexOf(b.wrench);
+    if (oa !== ob)
+      return oa - ob;
+    return b.weight - a.weight;
+  });
+  const contributors = [...new Set(findings.map((f) => f.wrench))];
+  const confidence = findings.length ? Math.min(1, findings.reduce((s, f) => s + f.weight, 0) / Math.max(3, findings.length)) * (0.5 + 0.5 * Math.min(1, contributors.length / 3)) : 0;
+  return { topic, findings, story: buildStory(topic, findings), contributors, confidence };
+}
+function buildStory(topic, findings) {
+  if (!findings.length)
+    return `No connected wrench findings for "${topic}" yet.`;
+  const byWrench = (w) => findings.filter((f) => f.wrench === w);
+  const parts = [];
+  const fotw = byWrench("fotw");
+  if (fotw.length)
+    parts.push(`Community: ${fotw[0].detail}`);
+  const mod = byWrench("mod");
+  if (mod.length)
+    parts.push(`Likely cause: ${mod[0].detail}`);
+  const def = byWrench("def");
+  if (def.length)
+    parts.push(`On the dev side: ${def[0].detail}`);
+  const myne = byWrench("myne");
+  if (myne.length)
+    parts.push(`Creator impact: ${myne[0].detail}`);
+  return parts.join("  \u2192  ");
+}
+
 // ../../packages/core/dist/mockWorkspace.js
 var mockWorkspaceContext = {
   workspaceId: "demo_workspace",
@@ -687,6 +721,57 @@ var CustomSourceAdapter = class {
     };
   }
 };
+
+// ../../packages/adapters/dist/wrenchBridges.js
+var hit = (topic, terms) => {
+  const t = topic.toLowerCase();
+  return terms.some((w) => t.includes(w));
+};
+var MOD_STATION = { id: "mod", label: "ModWrench", tagline: "Every mod platform \xB7 load order \xB7 crashlog", color: "#4cc2ff", available: true };
+var DEF_STATION = { id: "def", label: "DefWrench", tagline: "Studio toolchain \xB7 builds \xB7 tickets", color: "#e0964a", available: true };
+var MYNE_STATION = { id: "myne", label: "MyneWrench", tagline: "Creator economies \xB7 Roblox \xB7 UEFN", color: "#2ee06a", available: true };
+var FOTW_STATION = { id: "fotw", label: "FOTW\xB2", tagline: "Community brain \xB7 the cockpit", color: "#7d88c8", available: true };
+var MockModBridge = class {
+  id = "mod";
+  station = MOD_STATION;
+  async findings(topic) {
+    const out = [];
+    if (hit(topic, ["crash", "ctd", "boss", "freeze"])) {
+      out.push({ wrench: "mod", kind: "load_order_hit", title: "Suspect mod in load order", detail: "Your load order has 'HD Texture Pack v3.1' enabled \u2014 recently updated and flagged in crashlogs at the same frame.", ref: "HD Texture Pack v3.1", weight: 0.85 });
+      out.push({ wrench: "mod", kind: "crashlog", title: "Crashlog top frame", detail: "Last crashlog: NullRef in BossIntroSequence.PlayCutscene() \u2014 points to a missing cutscene asset.", ref: "crash.log", weight: 0.7 });
+    }
+    if (hit(topic, ["performance", "fps", "stutter", "bottleneck"])) {
+      out.push({ wrench: "mod", kind: "load_order_hit", title: "Heavy script mod", detail: "Two script-heavy mods load late in your order; common cause of city-area stutter.", ref: "script mods", weight: 0.6 });
+    }
+    return out;
+  }
+};
+var MockDevBridge = class {
+  id = "def";
+  station = DEF_STATION;
+  async findings(topic) {
+    const out = [];
+    if (hit(topic, ["crash", "ctd", "boss", "asset", "cutscene"])) {
+      out.push({ wrench: "def", kind: "open_ticket", title: "Matching Jira ticket", detail: "GAME-1423 'Boss intro cutscene asset removed in 1.4.2' is open and assigned \u2014 directly matches the crashlog.", ref: "GAME-1423", weight: 0.8 });
+      out.push({ wrench: "def", kind: "build", title: "Last build touched it", detail: "Jenkins build #842 (last night) modified /assets/cutscenes/boss_intro \u2014 status: passing.", ref: "#842", weight: 0.55 });
+    }
+    return out;
+  }
+};
+var MockCreatorBridge = class {
+  id = "myne";
+  station = MYNE_STATION;
+  async findings(topic) {
+    const out = [];
+    if (hit(topic, ["crash", "review", "refund", "rating"])) {
+      out.push({ wrench: "myne", kind: "economy", title: "Creator impact", detail: "Your Roblox experience's session length dipped this week and refund-flavored reviews are up \u2014 same window as the crash spike.", ref: "experience", weight: 0.4 });
+    }
+    return out;
+  }
+};
+function createMockWrenchBridges() {
+  return [new MockModBridge(), new MockDevBridge(), new MockCreatorBridge()];
+}
 
 // ../../packages/adapters/dist/index.js
 function createDefaultMockAdapters() {
@@ -1209,12 +1294,38 @@ async function readActiveTab() {
   }
 }
 
-// src/customSources.ts
-var KEY5 = "helpme.custom.v1";
-var sources = [];
+// src/rack.ts
+var KEY5 = "helpme.rack.v1";
+var paired = /* @__PURE__ */ new Set(["fotw"]);
 var listeners5 = /* @__PURE__ */ new Set();
+async function hydrateRack() {
+  const saved = await load(KEY5, ["fotw", "mod", "def"]);
+  paired = new Set(saved.length ? saved : ["fotw"]);
+  paired.add("fotw");
+}
+function isPaired(id) {
+  return paired.has(id);
+}
+function listPaired() {
+  return [...paired];
+}
+function togglePair(id) {
+  if (id === "fotw") return;
+  if (paired.has(id)) paired.delete(id);
+  else paired.add(id);
+  save(KEY5, [...paired]);
+  emit4();
+}
+function emit4() {
+  listeners5.forEach((fn) => fn());
+}
+
+// src/customSources.ts
+var KEY6 = "helpme.custom.v1";
+var sources = [];
+var listeners6 = /* @__PURE__ */ new Set();
 async function hydrateCustom() {
-  sources = await load(KEY5, []);
+  sources = await load(KEY6, []);
 }
 function listCustom() {
   return sources;
@@ -1223,20 +1334,20 @@ function addCustom(input) {
   const id = `custom_${input.label.toLowerCase().replace(/[^a-z0-9]+/g, "_")}_${Date.now().toString(36)}`;
   const src = { ...input, id };
   sources = [...sources, src];
-  save(KEY5, sources);
-  emit4();
+  save(KEY6, sources);
+  emit5();
   return src;
 }
 function removeCustom(id) {
   sources = sources.filter((s) => s.id !== id);
-  save(KEY5, sources);
-  emit4();
+  save(KEY6, sources);
+  emit5();
 }
 function onCustomChange(fn) {
-  listeners5.add(fn);
+  listeners6.add(fn);
 }
-function emit4() {
-  listeners5.forEach((fn) => fn());
+function emit5() {
+  listeners6.forEach((fn) => fn());
 }
 
 // src/sidepanel.ts
@@ -1780,6 +1891,114 @@ function buildAddView() {
 }
 var navItems = [];
 var navButtons = [];
+var WRENCH_STATIONS = [FOTW_STATION, MOD_STATION, DEF_STATION, MYNE_STATION];
+var wrenchBridges = createMockWrenchBridges();
+var rackThreadHost = null;
+function buildRackView() {
+  const view = el("div", "view");
+  view.id = "view-rack";
+  const rack = el("div", "rack");
+  rack.append(el("div", "section-label", "Your wrenches \xB7 pair the ones you run"));
+  const pegboard = el("div", "pegboard");
+  for (const st of WRENCH_STATIONS) {
+    const card = el("button", "wrenchcard");
+    card.style.setProperty("--wc", st.color);
+    card.setAttribute("aria-pressed", String(isPaired(st.id)));
+    card.setAttribute("data-available", String(st.available));
+    const name = el("div", "wname");
+    const ico = el("div", "wico", st.label.charAt(0));
+    ico.style.background = st.color;
+    name.append(ico, document.createTextNode(st.label));
+    card.append(name, el("div", "wtag", st.tagline));
+    const state = el("div", `wstate ${isPaired(st.id) ? "on" : "off"}`, st.id === "fotw" ? "cockpit" : isPaired(st.id) ? "paired" : "tap to pair");
+    card.append(state);
+    card.addEventListener("click", () => {
+      togglePair(st.id);
+      card.setAttribute("aria-pressed", String(isPaired(st.id)));
+      state.className = `wstate ${isPaired(st.id) ? "on" : "off"}`;
+      state.textContent = st.id === "fotw" ? "cockpit" : isPaired(st.id) ? "paired" : "tap to pair";
+    });
+    pegboard.append(card);
+  }
+  rack.append(pegboard);
+  rack.append(el("div", "section-label", "Cross-wrench thread"));
+  const composer = el("div", "composer glass");
+  const ta = el("textarea");
+  ta.placeholder = "What are you chasing? e.g. 'crashing at the factory boss'";
+  const bar = el("div", "composer-bar");
+  bar.append(el("span", "hint", "Threads one story across your paired wrenches"));
+  const btn = el("button", "primary", "Thread it \u2726");
+  bar.append(btn);
+  composer.append(ta, bar);
+  const threadHost = el("div", "result");
+  rackThreadHost = threadHost;
+  threadHost.append(emptyThread());
+  btn.addEventListener("click", async () => {
+    const topic = ta.value.trim();
+    if (!topic) {
+      ta.focus();
+      return;
+    }
+    btn.disabled = true;
+    threadHost.innerHTML = "";
+    const loading = el("div", "card glass lux");
+    loading.append(el("div", "skel w40"), el("div", "skel w90"), el("div", "skel w70"));
+    threadHost.append(loading);
+    try {
+      const paired2 = new Set(listPaired());
+      const help = await communityHelp({ userMessage: topic, sourcePolicy: "auto_scope_connected_sources" }, workspace, allAdapters);
+      const fotwBridge = {
+        id: "fotw",
+        station: FOTW_STATION,
+        findings: async () => help.evidence?.length ? [{ wrench: "fotw", kind: "community_signal", title: "Community signal", detail: `${help.answer.split("\n")[0]} (${Math.round((help.confidence ?? 0) * 100)}% across ${help.sourcesUsed.join(", ")})`, weight: help.confidence ?? 0.5 }] : []
+      };
+      const active = [fotwBridge, ...wrenchBridges.filter((b) => paired2.has(b.id))];
+      const thread = await correlate(topic, active);
+      threadHost.innerHTML = "";
+      threadHost.append(renderThread(thread));
+    } finally {
+      btn.disabled = false;
+    }
+  });
+  rack.append(composer, threadHost);
+  view.append(rack);
+  return view;
+}
+function emptyThread() {
+  const e = el("div", "emptythread");
+  e.append(document.createTextNode("Pair your wrenches above, then thread a topic. FOTW\xB2 brings the community signal; ModWrench the likely cause; DefWrench the fix; MyneWrench the impact \u2014 one story, not six screens."));
+  return e;
+}
+var WSTATION = {
+  fotw: { label: "FOTW\xB2", color: "#7d88c8" },
+  mod: { label: "ModWrench", color: "#4cc2ff" },
+  def: { label: "DefWrench", color: "#e0964a" },
+  myne: { label: "MyneWrench", color: "#2ee06a" }
+};
+function renderThread(thread) {
+  const card = el("div", "thread card glass lux");
+  if (!thread.findings.length) {
+    card.append(emptyThread());
+    return card;
+  }
+  card.append(el("div", "tlead", `\u201C${thread.topic}\u201D \u2014 threaded across ${thread.contributors.length} wrench${thread.contributors.length === 1 ? "" : "es"}`));
+  card.append(meterEl(thread.confidence));
+  const chain = el("div", "chain");
+  for (const f of thread.findings) {
+    const ws = WSTATION[f.wrench] ?? { label: f.wrench, color: "#9aa6c4" };
+    const link = el("div", "link");
+    link.style.setProperty("--lc", ws.color);
+    const node = el("div", "lnode", ws.label.charAt(0));
+    node.style.background = ws.color;
+    const body = el("div", "lbody");
+    body.append(el("div", "lwrench", ws.label), el("div", "ltitle", f.title), el("div", "ldetail", f.detail));
+    if (f.ref) body.append(el("span", "lref", f.ref));
+    link.append(node, body);
+    chain.append(link);
+  }
+  card.append(chain);
+  return card;
+}
 function buildSettingsView() {
   const view = el("div", "view");
   view.id = "view-settings";
@@ -1830,6 +2049,7 @@ function rebuildNav() {
   const custom = listCustom();
   navItems = [
     { id: "ask", label: "Ask", accent: "#4cc2ff" },
+    { id: "rack", label: "Rack", accent: "#7d88c8" },
     { id: "pulse", label: "Pulse", accent: "#2ee06a" },
     ...connected2.map((s) => ({ id: s.source, label: meta(s.source).label, accent: meta(s.source).color })),
     ...custom.map((c) => ({ id: c.id, label: c.label, accent: c.color })),
@@ -1840,6 +2060,7 @@ function rebuildNav() {
   views.innerHTML = "";
   views.append(
     buildAskView(),
+    buildRackView(),
     buildPulseView(),
     ...connected2.map((s) => buildSourceView(s)),
     ...custom.map((c) => buildCustomFeedView(c)),
@@ -1903,7 +2124,7 @@ function scheduleTrickle() {
   trickleTimer = window.setInterval(trickleTick, getSettings().trickleMs);
 }
 onSettingsChange(scheduleTrickle);
-Promise.all([hydrate(), hydratePrefs(), hydrateCustom(), hydrateSettings(), hydrateConnections()]).then(() => {
+Promise.all([hydrate(), hydratePrefs(), hydrateCustom(), hydrateSettings(), hydrateConnections(), hydrateRack()]).then(() => {
   scheduleTrickle();
   rebuildNav();
   if (queueBody) renderQueue(queueBody);
