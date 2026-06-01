@@ -580,8 +580,8 @@ var CustomSourceAdapter = class {
   // normalized bucket; cfg.id keeps identity
   capabilities;
   cfg;
-  constructor(cfg) {
-    this.cfg = cfg;
+  constructor(cfg2) {
+    this.cfg = cfg2;
     this.capabilities = {
       source: "forum",
       read: true,
@@ -591,7 +591,7 @@ var CustomSourceAdapter = class {
       supportsRealtime: false,
       supportsPrivateSpaces: false,
       supportsUserOwnedRetention: false,
-      approvedSpaces: [cfg.url]
+      approvedSpaces: [cfg2.url]
     };
   }
   async fetchDiscourse(query, limit) {
@@ -1320,12 +1320,62 @@ function emit4() {
   listeners5.forEach((fn) => fn());
 }
 
+// src/helperLink.ts
+var KEY6 = "helpme.helper.v1";
+var cfg = null;
+async function hydrateHelper() {
+  const saved = await load(KEY6, null);
+  cfg = saved && saved.url ? saved : null;
+}
+function getHelper() {
+  return cfg;
+}
+function setHelper(url, token) {
+  cfg = url ? { url: url.replace(/\/+$/, ""), token } : null;
+  save(KEY6, cfg);
+}
+var HelperBridge = class {
+  constructor(id, station, base, token) {
+    this.id = id;
+    this.station = station;
+    this.base = base;
+    this.token = token;
+  }
+  async findings(topic) {
+    try {
+      const res = await fetch(`${this.base}/wrench/${this.id}`, {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-fotw-token": this.token },
+        body: JSON.stringify({ tool: "correlate", args: { topic } })
+      });
+      if (!res.ok) return [];
+      const data = await res.json();
+      return (data.findings ?? []).map((f) => ({ ...f, wrench: this.id }));
+    } catch {
+      return [];
+    }
+  }
+};
+async function liveHelperBridges(stationFor) {
+  if (!cfg) return null;
+  try {
+    const res = await fetch(`${cfg.url}/wrenches`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    const list2 = data.wrenches ?? [];
+    if (!list2.length) return null;
+    return list2.map((w) => new HelperBridge(w.id, stationFor(w.id), cfg.url, cfg.token));
+  } catch {
+    return null;
+  }
+}
+
 // src/customSources.ts
-var KEY6 = "helpme.custom.v1";
+var KEY7 = "helpme.custom.v1";
 var sources = [];
 var listeners6 = /* @__PURE__ */ new Set();
 async function hydrateCustom() {
-  sources = await load(KEY6, []);
+  sources = await load(KEY7, []);
 }
 function listCustom() {
   return sources;
@@ -1334,13 +1384,13 @@ function addCustom(input) {
   const id = `custom_${input.label.toLowerCase().replace(/[^a-z0-9]+/g, "_")}_${Date.now().toString(36)}`;
   const src = { ...input, id };
   sources = [...sources, src];
-  save(KEY6, sources);
+  save(KEY7, sources);
   emit5();
   return src;
 }
 function removeCustom(id) {
   sources = sources.filter((s) => s.id !== id);
-  save(KEY6, sources);
+  save(KEY7, sources);
   emit5();
 }
 function onCustomChange(fn) {
@@ -1952,9 +2002,13 @@ function buildRackView() {
         station: FOTW_STATION,
         findings: async () => help.evidence?.length ? [{ wrench: "fotw", kind: "community_signal", title: "Community signal", detail: `${help.answer.split("\n")[0]} (${Math.round((help.confidence ?? 0) * 100)}% across ${help.sourcesUsed.join(", ")})`, weight: help.confidence ?? 0.5 }] : []
       };
-      const active = [fotwBridge, ...wrenchBridges.filter((b) => paired2.has(b.id))];
+      const stationFor = (id) => WRENCH_STATIONS.find((s) => s.id === id) ?? FOTW_STATION;
+      const live = await liveHelperBridges(stationFor);
+      const wrenchSet = (live ?? wrenchBridges).filter((b) => paired2.has(b.id));
+      const active = [fotwBridge, ...wrenchSet];
       const thread = await correlate(topic, active);
       threadHost.innerHTML = "";
+      if (live) threadHost.append(el("div", "tlead", "\u25CF Live \u2014 threaded from your local wrenches"));
       threadHost.append(renderThread(thread));
     } finally {
       btn.disabled = false;
@@ -2030,6 +2084,27 @@ function buildSettingsView() {
   speed.addEventListener("change", () => setSettings({ trickleMs: Number(speed.value) }));
   speedWrap.append(speedLabel, speed);
   card.append(trickWrap, speedWrap);
+  const helper = getHelper();
+  card.append(el("div", "section-label", "Local helper (Rack \u2194 your wrenches)"));
+  const hUrl = el("input", "toneselect");
+  hUrl.placeholder = "http://127.0.0.1:7717";
+  hUrl.value = helper?.url ?? "";
+  hUrl.style.width = "100%";
+  const hTok = el("input", "toneselect");
+  hTok.placeholder = "helper token (printed when you start it)";
+  hTok.value = helper?.token ?? "";
+  hTok.style.width = "100%";
+  const hStatus = el("div", "addhint", helper ? "saved \u2014 open the Rack and Thread it to go live" : "not connected \u2014 Rack uses demo wrench data");
+  const hSave = el("button", "dbtn", "Save helper");
+  hSave.addEventListener("click", async () => {
+    setHelper(hUrl.value.trim(), hTok.value.trim());
+    hStatus.textContent = "Checking\u2026";
+    const live = await liveHelperBridges(() => FOTW_STATION);
+    hStatus.textContent = live ? `\u25CF connected \u2014 ${live.length} wrench${live.length === 1 ? "" : "es"} reachable` : "saved, but helper not reachable yet (start it, then re-save)";
+  });
+  const hRow = el("div", "addform");
+  hRow.append(hUrl, hTok, hSave, hStatus);
+  card.append(hRow);
   const danger = el("div", "addform");
   danger.append(el("div", "section-label", "Data"));
   const clearQ = el("button", "dbtn", "Clear all drafts");
@@ -2124,7 +2199,7 @@ function scheduleTrickle() {
   trickleTimer = window.setInterval(trickleTick, getSettings().trickleMs);
 }
 onSettingsChange(scheduleTrickle);
-Promise.all([hydrate(), hydratePrefs(), hydrateCustom(), hydrateSettings(), hydrateConnections(), hydrateRack()]).then(() => {
+Promise.all([hydrate(), hydratePrefs(), hydrateCustom(), hydrateSettings(), hydrateConnections(), hydrateRack(), hydrateHelper()]).then(() => {
   scheduleTrickle();
   rebuildNav();
   if (queueBody) renderQueue(queueBody);

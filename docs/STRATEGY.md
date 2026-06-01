@@ -148,6 +148,12 @@ revenue first** and price it for its audience, not the modders'.
    prove the cross-wrench thread on actual Mod/Def data, **inside `packages/pro`.**
 4. **One-click** — installer wrapping wrenches + bridge + FOTW², plus the
    license-key gate. Unblocks the Free-tier store launch for non-GitHub humans.
+   - ✅ **DONE:** the **local helper** (`@fotw/helper`) — loopback bridge the Rack
+     uses to reach local wrenches (token-gated, read-only, holds no secrets);
+     Settings → Local helper wires it; live spine flips to real data. Cross-
+     platform install scripts in `installer/`; see `docs/INSTALL.md`.
+   - ⏳ **NEXT:** signed double-click installer (.exe/.dmg, bundles Node + auto-
+     start) — needs code-signing + build runners. License-key gate still to do.
 
 Rationale: **decide → prove → package.** Each step depends on the prior. Don't
 package a thing you haven't proven; don't prove a thing in the wrong-licensed file.

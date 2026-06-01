@@ -3,13 +3,20 @@
   "name": "FOTW² — Fly On The Wall",
   "description": "Ask FOTW² about the visible page, selected text, or current community thread. Drafts require approval.",
   "version": "0.1.0",
-  "permissions": ["activeTab", "scripting", "storage", "sidePanel", "tabs"],
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage",
+    "sidePanel",
+    "tabs"
+  ],
   "host_permissions": [],
   "optional_host_permissions": [
     "https://discord.com/*",
     "https://*.reddit.com/*",
     "https://*.steamcommunity.com/*",
-    "https://github.com/*"
+    "https://github.com/*",
+    "http://127.0.0.1:7717/*"
   ],
   "action": {
     "default_title": "FOTW²",

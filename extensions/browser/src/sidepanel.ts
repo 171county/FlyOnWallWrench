@@ -27,6 +27,7 @@ import { type WrenchFinding, type WrenchId } from "@help-me-comms/core";
 import { correlate } from "@fotw/pro";
 import { createMockWrenchBridges, FOTW_STATION, MOD_STATION, DEF_STATION, MYNE_STATION } from "@help-me-comms/adapters";
 import { hydrateRack, isPaired, listPaired, togglePair } from "./rack";
+import { getHelper, hydrateHelper, liveHelperBridges, setHelper } from "./helperLink";
 import { addCustom, hydrateCustom, listCustom, onCustomChange, removeCustom, type CustomKind, type CustomSource } from "./customSources";
 import { CustomSourceAdapter } from "@help-me-comms/adapters";
 
@@ -630,9 +631,14 @@ function buildRackView(): HTMLElement {
           ? [{ wrench: "fotw" as WrenchId, kind: "community_signal", title: "Community signal", detail: `${help.answer.split("\n")[0]} (${Math.round((help.confidence ?? 0) * 100)}% across ${help.sourcesUsed.join(", ")})`, weight: help.confidence ?? 0.5 }]
           : [],
       };
-      const active = [fotwBridge, ...wrenchBridges.filter((b) => paired.has(b.id))];
+      // Live wrench data from the local helper if it's running; else the mocks.
+      const stationFor = (id: string) => (WRENCH_STATIONS.find((s) => s.id === id) ?? FOTW_STATION);
+      const live = await liveHelperBridges(stationFor);
+      const wrenchSet = (live ?? wrenchBridges).filter((b) => paired.has(b.id));
+      const active = [fotwBridge, ...wrenchSet];
       const thread = await correlate(topic, active);
       threadHost.innerHTML = "";
+      if (live) threadHost.append(el("div", "tlead", "● Live — threaded from your local wrenches"));
       threadHost.append(renderThread(thread));
     } finally {
       btn.disabled = false;
@@ -712,6 +718,29 @@ function buildSettingsView(): HTMLElement {
   speedWrap.append(speedLabel, speed);
 
   card.append(trickWrap, speedWrap);
+
+  // local helper — connects the Rack to the user's local MCP wrenches
+  const helper = getHelper();
+  card.append(el("div", "section-label", "Local helper (Rack ↔ your wrenches)"));
+  const hUrl = el("input", "toneselect") as HTMLInputElement;
+  hUrl.placeholder = "http://127.0.0.1:7717";
+  hUrl.value = helper?.url ?? "";
+  hUrl.style.width = "100%";
+  const hTok = el("input", "toneselect") as HTMLInputElement;
+  hTok.placeholder = "helper token (printed when you start it)";
+  hTok.value = helper?.token ?? "";
+  hTok.style.width = "100%";
+  const hStatus = el("div", "addhint", helper ? "saved — open the Rack and Thread it to go live" : "not connected — Rack uses demo wrench data");
+  const hSave = el("button", "dbtn", "Save helper") as HTMLButtonElement;
+  hSave.addEventListener("click", async () => {
+    setHelper(hUrl.value.trim(), hTok.value.trim());
+    hStatus.textContent = "Checking…";
+    const live = await liveHelperBridges(() => FOTW_STATION);
+    hStatus.textContent = live ? `● connected — ${live.length} wrench${live.length === 1 ? "" : "es"} reachable` : "saved, but helper not reachable yet (start it, then re-save)";
+  });
+  const hRow = el("div", "addform");
+  hRow.append(hUrl, hTok, hSave, hStatus);
+  card.append(hRow);
 
   // data controls
   const danger = el("div", "addform");
@@ -818,7 +847,7 @@ function scheduleTrickle() {
 onSettingsChange(scheduleTrickle);
 
 // Hydrate persisted state, then build nav and restore the last tab + queue.
-Promise.all([hydrateQueue(), hydratePrefs(), hydrateCustom(), hydrateSettings(), hydrateConnections(), hydrateRack()]).then(() => {
+Promise.all([hydrateQueue(), hydratePrefs(), hydrateCustom(), hydrateSettings(), hydrateConnections(), hydrateRack(), hydrateHelper()]).then(() => {
   scheduleTrickle();
   rebuildNav();
   if (queueBody) renderQueue(queueBody);
