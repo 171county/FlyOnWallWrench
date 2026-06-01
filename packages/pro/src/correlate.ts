@@ -1,7 +1,7 @@
 // The spine: thread ONE story across the wrenches.
 // community signal (FOTW²) -> mod cause (ModWrench) -> dev fix (DefWrench).
 // This is the thing nobody else has: not co-located tabs, a connective tissue.
-import type { WrenchBridge, WrenchFinding, WrenchId } from "./wrench.js";
+import type { WrenchBridge, WrenchFinding, WrenchId } from "@help-me-comms/core";
 
 export type WrenchThread = {
   topic: string;

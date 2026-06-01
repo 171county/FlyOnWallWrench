@@ -10,7 +10,8 @@
   },
   "dependencies": {
     "@help-me-comms/core": "workspace:*",
-    "@help-me-comms/adapters": "workspace:*"
+    "@help-me-comms/adapters": "workspace:*",
+    "@fotw/pro": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.7.2",

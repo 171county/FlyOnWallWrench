@@ -140,6 +140,8 @@ revenue first** and price it for its audience, not the modders'.
 ## 8. Build order (decided: gameplan → spine → one-click)
 
 1. **Gameplan** — this doc. ✅ (keep it living)
+   - ✅ **DONE:** license boundary set — spine moved to `packages/pro` (BUSL-1.1); contract stays in `@help-me-comms/core` (MIT).
+   - ✅ **DONE:** live MCP bridge built (`@fotw/pro` `McpWrenchBridge`) — talks to a localhost wrench endpoint; mock fallback when absent.
 2. **(1.5) License boundary** — create the `core`(MIT) vs `pro`(BSL/closed) package
    split *before* writing the spine into it. Cheap now, painful later.
 3. **Spine (live)** — build real wrench bridges (mock → live via the local helper),

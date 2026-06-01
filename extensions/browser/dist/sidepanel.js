@@ -402,40 +402,6 @@ Really appreciate you flagging this \u2014 we'll keep you posted! \u{1F64F}`;
   return body;
 }
 
-// ../../packages/core/dist/correlate.js
-var ORDER = ["fotw", "mod", "def", "myne"];
-async function correlate(topic, bridges) {
-  const all = (await Promise.all(bridges.map((b) => b.findings(topic).catch(() => [])))).flat();
-  const findings = [...all].sort((a, b) => {
-    const oa = ORDER.indexOf(a.wrench), ob = ORDER.indexOf(b.wrench);
-    if (oa !== ob)
-      return oa - ob;
-    return b.weight - a.weight;
-  });
-  const contributors = [...new Set(findings.map((f) => f.wrench))];
-  const confidence = findings.length ? Math.min(1, findings.reduce((s, f) => s + f.weight, 0) / Math.max(3, findings.length)) * (0.5 + 0.5 * Math.min(1, contributors.length / 3)) : 0;
-  return { topic, findings, story: buildStory(topic, findings), contributors, confidence };
-}
-function buildStory(topic, findings) {
-  if (!findings.length)
-    return `No connected wrench findings for "${topic}" yet.`;
-  const byWrench = (w) => findings.filter((f) => f.wrench === w);
-  const parts = [];
-  const fotw = byWrench("fotw");
-  if (fotw.length)
-    parts.push(`Community: ${fotw[0].detail}`);
-  const mod = byWrench("mod");
-  if (mod.length)
-    parts.push(`Likely cause: ${mod[0].detail}`);
-  const def = byWrench("def");
-  if (def.length)
-    parts.push(`On the dev side: ${def[0].detail}`);
-  const myne = byWrench("myne");
-  if (myne.length)
-    parts.push(`Creator impact: ${myne[0].detail}`);
-  return parts.join("  \u2192  ");
-}
-
 // ../../packages/core/dist/mockWorkspace.js
 var mockWorkspaceContext = {
   workspaceId: "demo_workspace",
@@ -1292,6 +1258,40 @@ async function readActiveTab() {
   } catch {
     return { ok: false, reason: "blocked", site };
   }
+}
+
+// ../../packages/pro/dist/correlate.js
+var ORDER = ["fotw", "mod", "def", "myne"];
+async function correlate(topic, bridges) {
+  const all = (await Promise.all(bridges.map((b) => b.findings(topic).catch(() => [])))).flat();
+  const findings = [...all].sort((a, b) => {
+    const oa = ORDER.indexOf(a.wrench), ob = ORDER.indexOf(b.wrench);
+    if (oa !== ob)
+      return oa - ob;
+    return b.weight - a.weight;
+  });
+  const contributors = [...new Set(findings.map((f) => f.wrench))];
+  const confidence = findings.length ? Math.min(1, findings.reduce((s, f) => s + f.weight, 0) / Math.max(3, findings.length)) * (0.5 + 0.5 * Math.min(1, contributors.length / 3)) : 0;
+  return { topic, findings, story: buildStory(topic, findings), contributors, confidence };
+}
+function buildStory(topic, findings) {
+  if (!findings.length)
+    return `No connected wrench findings for "${topic}" yet.`;
+  const byWrench = (w) => findings.filter((f) => f.wrench === w);
+  const parts = [];
+  const fotw = byWrench("fotw");
+  if (fotw.length)
+    parts.push(`Community: ${fotw[0].detail}`);
+  const mod = byWrench("mod");
+  if (mod.length)
+    parts.push(`Likely cause: ${mod[0].detail}`);
+  const def = byWrench("def");
+  if (def.length)
+    parts.push(`On the dev side: ${def[0].detail}`);
+  const myne = byWrench("myne");
+  if (myne.length)
+    parts.push(`Creator impact: ${myne[0].detail}`);
+  return parts.join("  \u2192  ");
 }
 
 // src/rack.ts

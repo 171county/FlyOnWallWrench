@@ -1,0 +1,17 @@
+Business Source License 1.1 (BUSL-1.1) — PLACEHOLDER
+
+Licensor: 171county / FOTW²
+Licensed Work: @fotw/pro (the FOTW² Pro correlation spine and premium bridges)
+
+The Licensed Work is source-available. You may view, fork, and modify it for
+non-production and evaluation use. You MAY NOT use it to provide a commercial
+product or service that competes with FOTW² Pro, nor resell it, without a
+commercial license from the Licensor.
+
+Change Date: <TBD — e.g. 4 years from each release>
+Change License: Apache-2.0 (the Licensed Work converts to Apache-2.0 on the
+Change Date).
+
+NOTE: This is a placeholder summary, NOT legal advice. The exact BUSL-1.1 text
+and parameters (Change Date, Additional Use Grant) must be finalized with an
+IP attorney before any public release. See docs/STRATEGY.md §3 (lawyer gate).

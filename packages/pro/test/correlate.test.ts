@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { correlate } from "../src/correlate.js";
-import type { WrenchBridge, WrenchFinding } from "../src/wrench.js";
+import type { WrenchBridge, WrenchFinding } from "@help-me-comms/core";
 
 function bridge(id: any, findings: WrenchFinding[]): WrenchBridge {
   return { id, station: { id, label: id, tagline: "", color: "#fff", available: true }, findings: async () => findings };

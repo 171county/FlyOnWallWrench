@@ -23,7 +23,8 @@ import { getSettings, hydrateSettings, onSettingsChange, setSettings } from "./s
 import { SITE_INFO } from "./pageReaders";
 import { connect, hydrateConnections, isConnected } from "./connections";
 import { readActiveTab } from "./liveReader";
-import { correlate, type WrenchFinding, type WrenchId } from "@help-me-comms/core";
+import { type WrenchFinding, type WrenchId } from "@help-me-comms/core";
+import { correlate } from "@fotw/pro";
 import { createMockWrenchBridges, FOTW_STATION, MOD_STATION, DEF_STATION, MYNE_STATION } from "@help-me-comms/adapters";
 import { hydrateRack, isPaired, listPaired, togglePair } from "./rack";
 import { addCustom, hydrateCustom, listCustom, onCustomChange, removeCustom, type CustomKind, type CustomSource } from "./customSources";
