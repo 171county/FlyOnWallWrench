@@ -23,6 +23,7 @@ import { getSettings, hydrateSettings, onSettingsChange, setSettings } from "./s
 import { SITE_INFO } from "./pageReaders";
 import { connect, hydrateConnections, isConnected } from "./connections";
 import { readActiveTab } from "./liveReader";
+import { snatch } from "./snatch";
 import { type WrenchFinding, type WrenchId } from "@help-me-comms/core";
 import { correlate } from "@fotw/pro";
 import { createMockWrenchBridges, FOTW_STATION, MOD_STATION, DEF_STATION, MYNE_STATION } from "@help-me-comms/adapters";
@@ -134,6 +135,40 @@ function buildAskView(): HTMLElement {
   const ta = el("textarea") as HTMLTextAreaElement;
   ta.placeholder = "Anyone else crashing at the factory boss intro?";
   composer.append(ta);
+
+  // SnatchIt — snip a region of the page into the chat as a deletable thumbnail.
+  const snatchRow = el("div", "snatchrow");
+  const snatchBtn = el("button", "btn2", "📸 SnatchIt") as HTMLButtonElement;
+  const snatchStatus = el("span", "snatchstatus", "");
+  const snatchTray = el("div", "snatchtray"); // holds thumbnails
+  snatchRow.append(snatchBtn, snatchStatus);
+  composer.append(snatchRow, snatchTray);
+
+  snatchBtn.addEventListener("click", async () => {
+    snatchStatus.textContent = "Drag a box on the page…";
+    snatchBtn.disabled = true;
+    const res = await snatch();
+    snatchBtn.disabled = false;
+    if (!res.ok) {
+      snatchStatus.textContent =
+        res.reason === "cancelled" ? "Snatch cancelled" :
+        res.reason === "no_permission" ? "Allow capture for this page, then retry" :
+        res.reason === "no_tab" ? "No active tab" : "This page blocked the snatch";
+      return;
+    }
+    snatchStatus.textContent = "Snatched ✦";
+    // deletable thumbnail chip
+    const chip = el("div", "snatchchip");
+    const thumb = el("img", "snatchthumb") as HTMLImageElement;
+    thumb.src = res.dataUrl;
+    thumb.alt = "snatch";
+    const del = el("button", "snatchdel", "✕") as HTMLButtonElement;
+    del.title = "Remove snatch";
+    del.addEventListener("click", () => { chip.remove(); if (!snatchTray.childElementCount) snatchStatus.textContent = ""; });
+    chip.append(thumb, del);
+    snatchTray.append(chip);
+  });
+
   composer.append(el("div", "section-label", "Send to"));
   const targets = el("div", "targets");
   // restore saved target selection (falls back to all connected)

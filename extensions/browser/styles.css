@@ -650,3 +650,15 @@ body.panel .views::-webkit-scrollbar-thumb:hover { background: var(--copper-lit,
 .link .ldetail { font-size: 12px; color: #cfd8e8; line-height: 1.45; }
 .link .lref { display: inline-block; margin-top: 5px; font-size: 10.5px; color: var(--muted); background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.10); padding: 2px 8px; border-radius: 999px; }
 .thread .emptythread { padding: 26px 16px; text-align: center; color: var(--faint); font-size: 12.5px; line-height: 1.55; border: 1px dashed rgba(255,255,255,.10); border-radius: 14px; }
+
+/* ============================================================
+   v14 — SnatchIt (snip → deletable thumbnail in the composer)
+   ============================================================ */
+.snatchrow { display: flex; align-items: center; gap: 10px; }
+.snatchstatus { font-size: 11px; color: var(--muted); }
+.snatchtray { display: flex; flex-wrap: wrap; gap: 8px; }
+.snatchtray:empty { display: none; }
+.snatchchip { position: relative; border-radius: 11px; overflow: hidden; border: 1px solid color-mix(in srgb, var(--lime) 40%, transparent); box-shadow: 0 6px 18px -6px rgba(0,0,0,.6), 0 0 14px -6px var(--lime); }
+.snatchthumb { display: block; max-width: 140px; max-height: 100px; object-fit: cover; }
+.snatchdel { position: absolute; top: 4px; right: 4px; width: 20px; height: 20px; border-radius: 50%; border: none; cursor: pointer; font-size: 11px; font-weight: 800; color: #fff; background: rgba(7,10,17,.78); box-shadow: 0 0 0 1px rgba(255,255,255,.15); display: grid; place-items: center; transition: background .15s; }
+.snatchdel:hover { background: var(--magenta); color: #1a0f06; }

@@ -16,7 +16,8 @@
     "https://*.reddit.com/*",
     "https://*.steamcommunity.com/*",
     "https://github.com/*",
-    "http://127.0.0.1:7717/*"
+    "http://127.0.0.1:7717/*",
+    "<all_urls>"
   ],
   "action": {
     "default_title": "FOTW²",

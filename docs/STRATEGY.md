@@ -180,6 +180,24 @@ package a thing you haven't proven; don't prove a thing in the wrong-licensed fi
 
 ---
 
+## 9b. Credential policy (decided)
+
+Best → last-resort. The extension and the local helper hold **nothing**:
+
+1. **OS-protected store (default):** Windows Credential Manager / macOS Keychain.
+   The wrenches own credentials there (ModWrench already does this). Helper +
+   extension stay secret-free.
+2. **Session-only:** ride the user's already-logged-in browser session (page
+   reads, SnatchIt) — zero stored credentials.
+3. **`.env` (last resort, beta only):** acceptable while building; must be
+   clearly flagged dev-only and never the shipped default.
+
+Net: no keys live on the wrenches' shipped surface; secrets sit in the OS vault
+or the user's own session. This is both the trust story and the Chrome-review
+answer.
+
+---
+
 ## 10. Trust posture (a feature, say it loud)
 
 Carried from the wrench DNA, true across the suite:
