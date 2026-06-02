@@ -57,4 +57,5 @@ document.getElementById("ask-page")?.addEventListener("click", async () => {
 document.getElementById("open-sidepanel")?.addEventListener("click", async () => {
   const tab = await getActiveTab();
   if (tab.id) await chrome.sidePanel.open({ tabId: tab.id });
+  window.close(); // dismiss the popup once the side panel is open
 });
