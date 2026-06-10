@@ -31,6 +31,8 @@ import { hydrateRack, isPaired, listPaired, togglePair } from "./rack";
 import { getHelper, hydrateHelper, liveHelperBridges, setHelper } from "./helperLink";
 import { addCustom, hydrateCustom, listCustom, onCustomChange, removeCustom, type CustomKind, type CustomSource } from "./customSources";
 import { CustomSourceAdapter } from "@help-me-comms/adapters";
+import { buildBayView } from "./buildBay";
+import { hydrateTheme, setTheme, THEMES } from "./themes";
 
 // module-level UI state, declared before any function that uses it
 let queueBody: HTMLElement | null = null;
@@ -471,7 +473,7 @@ function renderDraftCard(container: HTMLElement, item: QueueItem) {
     const row = el("div", "dactions");
     if (item.status === "approved") {
       const pv = el("div", "privacy");
-      pv.append(el("span", "dot"), el("span", undefined, "Approved — paste into the client to post. Help Me never posts on its own."));
+      pv.append(el("span", "dot"), el("span", undefined, "Approved — paste into the client to post. FOTW² never posts on its own."));
       card.append(pv);
     }
     const del = el("button", "dbtn", "Remove") as HTMLButtonElement;
@@ -635,10 +637,12 @@ function buildRackView(): HTMLElement {
   rack.append(el("div", "section-label", "Cross-wrench thread"));
   const composer = el("div", "composer glass");
   const ta = el("textarea") as HTMLTextAreaElement;
+  ta.id = "rack-topic";
   ta.placeholder = "What are you chasing? e.g. 'crashing at the factory boss'";
   const bar = el("div", "composer-bar");
   bar.append(el("span", "hint", "Threads one story across your paired wrenches"));
   const btn = el("button", "primary", "Thread it ✦") as HTMLButtonElement;
+  btn.id = "rack-thread";
   bar.append(btn);
   composer.append(ta, bar);
 
@@ -723,6 +727,31 @@ function renderThread(thread: { topic: string; findings: WrenchFinding[]; story:
 function buildSettingsView(): HTMLElement {
   const view = el("div", "view");
   view.id = "view-settings";
+
+  // theme picker — the whole cockpit reskins live
+  const themeCard = el("div", "addform card glass");
+  themeCard.append(el("div", "section-label", "Theme · pick your cockpit"));
+  const themeGrid = el("div", "themegrid");
+  const currentTheme = document.documentElement.dataset.theme ?? "garage";
+  for (const t of THEMES) {
+    const b = el("button", "themecard") as HTMLButtonElement;
+    b.setAttribute("aria-pressed", String(t.id === currentTheme));
+    const chips = el("div", "themechips");
+    for (const c of t.chips) {
+      const chip = el("span", "themechip");
+      chip.style.background = c;
+      chips.append(chip);
+    }
+    b.append(chips, el("div", "themename", t.label), el("div", "themetag", t.tagline));
+    b.addEventListener("click", () => {
+      setTheme(t.id);
+      themeGrid.querySelectorAll(".themecard").forEach((n) => n.setAttribute("aria-pressed", "false"));
+      b.setAttribute("aria-pressed", "true");
+    });
+    themeGrid.append(b);
+  }
+  themeCard.append(themeGrid);
+
   const card = el("div", "addform card glass");
   card.append(el("div", "section-label", "Settings"));
 
@@ -789,8 +818,18 @@ function buildSettingsView(): HTMLElement {
   danger.append(clearQ, clearAll);
   danger.append(el("div", "addhint", "Stored data is local to this browser: your drafts, custom sources, target picks, and settings. No tokens or fetched messages are ever stored."));
 
-  view.append(card, danger);
+  view.append(themeCard, card, danger);
   return view;
+}
+
+// Hand a topic from another bay to the Rack and thread it immediately.
+function threadOnRack(topic: string) {
+  setActive("rack");
+  const ta = document.getElementById("rack-topic") as HTMLTextAreaElement | null;
+  const btn = document.getElementById("rack-thread") as HTMLButtonElement | null;
+  if (!ta || !btn) return;
+  ta.value = topic;
+  btn.click();
 }
 
 function rebuildNav() {
@@ -798,6 +837,7 @@ function rebuildNav() {
   navItems = [
     { id: "ask", label: "Ask", accent: "#4cc2ff" },
     { id: "rack", label: "Rack", accent: "#7d88c8" },
+    { id: "bay", label: "Builds", accent: "#e0964a" },
     { id: "pulse", label: "Pulse", accent: "#2ee06a" },
     ...connected.map((s) => ({ id: s.source, label: meta(s.source).label, accent: meta(s.source).color })),
     ...custom.map((c) => ({ id: c.id, label: c.label, accent: c.color })),
@@ -810,6 +850,7 @@ function rebuildNav() {
   views.append(
     buildAskView(),
     buildRackView(),
+    buildBayView(threadOnRack),
     buildPulseView(),
     ...connected.map((s) => buildSourceView(s)),
     ...custom.map((c) => buildCustomFeedView(c)),
@@ -882,7 +923,7 @@ function scheduleTrickle() {
 onSettingsChange(scheduleTrickle);
 
 // Hydrate persisted state, then build nav and restore the last tab + queue.
-Promise.all([hydrateQueue(), hydratePrefs(), hydrateCustom(), hydrateSettings(), hydrateConnections(), hydrateRack(), hydrateHelper()]).then(() => {
+Promise.all([hydrateQueue(), hydratePrefs(), hydrateCustom(), hydrateSettings(), hydrateConnections(), hydrateRack(), hydrateHelper(), hydrateTheme()]).then(() => {
   scheduleTrickle();
   rebuildNav();
   if (queueBody) renderQueue(queueBody);

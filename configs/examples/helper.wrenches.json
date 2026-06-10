@@ -1,0 +1,20 @@
+{
+  "$comment": "FOTW² helper wrench config. Copy to ~/.fotw/wrenches.json (or point FOTW_HELPER_WRENCHES at it). Wrenches not listed here stay in demo mode. The helper holds no secrets — wrench credentials live in each wrench's own env/keychain, passed via the optional `env` block or the wrench's own config.",
+  "wrenches": [
+    {
+      "id": "def",
+      "mode": "mcp",
+      "command": "npx",
+      "args": ["-y", "@defwrench/cli"],
+      "queryTool": "dw_correlate",
+      "env": {
+        "DEFWRENCH_PROJECT_ROOT": "/absolute/path/to/your/game/project"
+      }
+    },
+    {
+      "id": "mod",
+      "mode": "mock",
+      "$comment": "Flip to mcp + command when ModWrench ships its correlate tool."
+    }
+  ]
+}

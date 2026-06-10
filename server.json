@@ -1,0 +1,50 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.171county/flyonwallwrench",
+  "title": "FOTW² — Fly On The Wall",
+  "description": "Community-intelligence MCP for game developers, modders, and community managers: ask what players are saying across Discord, Reddit, Steam, forums and GitHub, get evidence-ranked answers, and queue approval-gated drafts. No secrets stored; nothing posts without explicit approval.",
+  "repository": {
+    "url": "https://github.com/171county/FlyOnWallWrench",
+    "source": "github"
+  },
+  "websiteUrl": "https://github.com/171county/FlyOnWallWrench#readme",
+  "version": "0.1.0",
+  "packages": [
+    {
+      "registryType": "npm",
+      "registryBaseUrl": "https://registry.npmjs.org",
+      "identifier": "@help-me-comms/mcp-server",
+      "version": "0.1.0",
+      "runtimeHint": "npx",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "DISCORD_BOT_TOKEN",
+          "description": "Optional Discord bot token for live read adapters; without it the Discord source runs on mock evidence.",
+          "isRequired": false,
+          "isSecret": true
+        },
+        {
+          "name": "GITHUB_TOKEN",
+          "description": "Optional GitHub token for the GitHub Issues/Discussions read adapter.",
+          "isRequired": false,
+          "isSecret": true
+        },
+        {
+          "name": "REDDIT_CLIENT_ID",
+          "description": "Optional Reddit app client id for the Reddit read adapter (with REDDIT_CLIENT_SECRET).",
+          "isRequired": false,
+          "isSecret": false
+        },
+        {
+          "name": "REDDIT_CLIENT_SECRET",
+          "description": "Optional Reddit app client secret.",
+          "isRequired": false,
+          "isSecret": true
+        }
+      ]
+    }
+  ]
+}

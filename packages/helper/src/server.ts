@@ -5,12 +5,13 @@
 //   - binds 127.0.0.1 ONLY (never 0.0.0.0)
 //   - requires a per-run token (printed on start, set in the extension) so other
 //     local pages can't poke it
-//   - read-only: only relays "findings"-style read tools; never writes
+//   - read-only: only relays findings + an allowlisted set of read tools; never writes
 //   - holds no secrets of its own
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
-import { DEFAULT_REGISTRY, findingsFor, type WrenchEntry } from "./wrenchRegistry.js";
-import { callWrenchTool } from "./mcpClient.js";
-import type { WrenchFinding } from "@help-me-comms/core";
+import { DEFAULT_REGISTRY, findingsFor, queryToolFor, type WrenchEntry } from "./wrenchRegistry.js";
+import { callWrenchTool, callWrenchToolJson } from "./mcpClient.js";
+import { mockToolResult } from "./mockTools.js";
+import type { WrenchFinding, WrenchId } from "@help-me-comms/core";
 
 export type HelperOptions = { port?: number; token?: string; registry?: WrenchEntry[] };
 
@@ -19,6 +20,29 @@ const STATIONS: Record<string, { label: string; color: string; tagline: string }
   def: { label: "DefWrench", color: "#e0964a", tagline: "Studio toolchain · builds · tickets" },
   myne: { label: "MyneWrench", color: "#2ee06a", tagline: "Creator economies · Roblox · UEFN" },
 };
+
+// Read-only tools the helper will relay to a wrench. Everything else is
+// refused — the helper is a window, not a control panel. Write-shaped tools
+// must never be added here; approval-gated writes belong to the wrench's own
+// client, not the loopback bridge.
+const RELAY_TOOLS = new Set([
+  // DefWrench meta + spine
+  "dw_status",
+  "dw_list_products",
+  "dw_detect_environment",
+  "dw_correlate",
+  // BuildWrench reads
+  "bw_list_providers",
+  "bw_list_pipelines",
+  "bw_list_builds",
+  "bw_get_build",
+  "bw_summarize_failure",
+  "bw_build_trends",
+  // sibling wrench correlates (same contract)
+  "mod_correlate",
+  "myne_correlate",
+  "correlate",
+]);
 
 export function createHelper(opts: HelperOptions = {}) {
   const port = opts.port ?? 7717;
@@ -41,11 +65,12 @@ export function createHelper(opts: HelperOptions = {}) {
       return json(res, 200, { ok: true, version: "0.1.0", wrenches: list });
     }
 
-    // Findings: POST /wrench/:id  { tool, args:{topic} }  -> { findings }
-    const m = /^\/wrench\/([a-z]+)$/.exec(url.pathname);
-    if (req.method === "POST" && m) {
+    // Findings: POST /wrench/:id  { args:{topic} }  -> { findings }
+    // (the query tool is chosen server-side per wrench; clients can't pick it)
+    const mFind = /^\/wrench\/([a-z]+)$/.exec(url.pathname);
+    if (req.method === "POST" && mFind) {
       if ((req.headers["x-fotw-token"] as string) !== token) return json(res, 401, { ok: false, error: "bad token" });
-      const id = m[1];
+      const id = mFind[1];
       const entry = registry.find((e) => e.id === id);
       if (!entry) return json(res, 404, { ok: false, error: "unknown wrench" });
       const body = await readBody(req);
@@ -54,12 +79,48 @@ export function createHelper(opts: HelperOptions = {}) {
       let findings: WrenchFinding[] = [];
       try {
         findings = entry.mode === "mcp" && entry.command
-          ? await callWrenchTool(entry.command, entry.args ?? [], entry.queryTool ?? "correlate", { topic })
+          ? await callWrenchTool(
+              { command: entry.command, args: entry.args ?? [], ...(entry.env ? { env: entry.env } : {}) },
+              queryToolFor(entry),
+              { topic },
+              entry.id as WrenchId,
+            )
           : await findingsFor(entry, topic);
       } catch {
         findings = [];
       }
-      return json(res, 200, { ok: true, findings });
+      return json(res, 200, { ok: true, mode: entry.mode, findings });
+    }
+
+    // Read-only tool relay: POST /wrench/:id/tool  { tool, args }  -> { data }
+    // Powers the cockpit's bays (e.g. the Build Bay reading bw_* tools).
+    // Strictly allowlisted; mock-mode wrenches serve canned demo data.
+    const mTool = /^\/wrench\/([a-z]+)\/tool$/.exec(url.pathname);
+    if (req.method === "POST" && mTool) {
+      if ((req.headers["x-fotw-token"] as string) !== token) return json(res, 401, { ok: false, error: "bad token" });
+      const id = mTool[1];
+      const entry = registry.find((e) => e.id === id);
+      if (!entry) return json(res, 404, { ok: false, error: "unknown wrench" });
+      const body = await readBody(req);
+      const tool = String(body?.tool ?? "");
+      const args = (body?.args && typeof body.args === "object" ? body.args : {}) as Record<string, unknown>;
+      if (!RELAY_TOOLS.has(tool)) {
+        return json(res, 403, { ok: false, error: `tool not relayable: ${tool || "<none>"} (read-only allowlist)` });
+      }
+
+      if (entry.mode === "mcp" && entry.command) {
+        const data = await callWrenchToolJson(
+          { command: entry.command, args: entry.args ?? [], ...(entry.env ? { env: entry.env } : {}) },
+          tool,
+          args,
+        );
+        if (data === null) return json(res, 502, { ok: false, error: "wrench unreachable (is it installed and on PATH?)" });
+        return json(res, 200, { ok: true, mode: "mcp", data });
+      }
+
+      const demo = mockToolResult(entry.id, tool, args);
+      if (demo === null) return json(res, 501, { ok: false, error: `no demo data for ${tool} on ${entry.id}` });
+      return json(res, 200, { ok: true, mode: "mock", data: demo });
     }
 
     json(res, 404, { ok: false, error: "not found" });

@@ -35,6 +35,27 @@ class HelperBridge implements WrenchBridge {
   }
 }
 
+// Relay an allowlisted read-only tool call to a wrench through the helper
+// (POST /wrench/:id/tool). Returns null when no helper is configured, the
+// helper is unreachable, or the tool was refused — callers fall back to demo.
+export async function helperTool<T = unknown>(
+  wrenchId: string,
+  tool: string,
+  args: Record<string, unknown> = {},
+): Promise<{ mode: "mcp" | "mock"; data: T } | null> {
+  if (!cfg) return null;
+  try {
+    const res = await fetch(`${cfg.url}/wrench/${wrenchId}/tool`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-fotw-token": cfg.token },
+      body: JSON.stringify({ tool, args }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.ok ? { mode: data.mode, data: data.data as T } : null;
+  } catch { return null; }
+}
+
 // Probe the helper's discovery endpoint; build live bridges for what it reports.
 // Returns null when no helper is configured/reachable -> caller uses mocks.
 export async function liveHelperBridges(stationFor: (id: string) => WrenchStation): Promise<WrenchBridge[] | null> {

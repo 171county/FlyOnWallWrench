@@ -1,6 +1,23 @@
 // Luminous "liquid aurora" background — a domain-warped fbm field in a
-// WebGL fragment shader. Deep space base with flowing cyan / violet / magenta,
-// tuned to sit behind glass panels without washing out text.
+// WebGL fragment shader. The color field is uniform-driven so the theme
+// engine can repaint the whole atmosphere live (see themes.ts), tuned to sit
+// behind glass panels without washing out text.
+
+export type ShaderPalette = {
+  deep: [number, number, number]; // base/background
+  c1: [number, number, number];   // primary flow color
+  c2: [number, number, number];   // secondary flow color
+  c3: [number, number, number];   // warm/metallic accent
+  glow: [number, number, number]; // whisper highlight in the cores
+};
+
+const DEFAULT_PALETTE: ShaderPalette = {
+  deep: [0.020, 0.028, 0.045],
+  c1: [0.30, 0.70, 1.00],
+  c2: [0.40, 0.46, 0.70],
+  c3: [0.85, 0.55, 0.28],
+  glow: [0.16, 1.0, 0.50],
+};
 
 const VERT = `
 attribute vec2 p;
@@ -11,6 +28,11 @@ const FRAG = `
 precision highp float;
 uniform vec2 u_res;
 uniform float u_time;
+uniform vec3 u_deep;
+uniform vec3 u_c1;
+uniform vec3 u_c2;
+uniform vec3 u_c3;
+uniform vec3 u_glow;
 
 float hash(vec2 p) {
   p = fract(p * vec2(123.34, 345.45));
@@ -43,19 +65,14 @@ void main() {
                 fbm(p + 1.5 * q + vec2(8.3, 2.8) - 0.5 * t));
   float f = fbm(p + 1.6 * r);
 
-  vec3 deep  = vec3(0.020, 0.028, 0.045);  // gunmetal
-  vec3 steel = vec3(0.30, 0.70, 1.00);     // steel cyan
-  vec3 slate = vec3(0.40, 0.46, 0.70);     // slate blue
-  vec3 amber = vec3(0.85, 0.55, 0.28);     // warm metal
-
-  vec3 col = mix(deep, slate, clamp(f * 1.30, 0.0, 1.0));
-  col = mix(col, steel, clamp(length(r) * 0.60, 0.0, 1.0));
-  col = mix(col, amber, clamp(q.x * q.y * 1.10, 0.0, 1.0));   // subtle warmth
-  col += steel * pow(f, 3.0) * 0.45;                          // cool cores
-  col += vec3(0.16, 1.0, 0.50) * pow(f, 5.0) * 0.16;          // whisper of terminal green
-  col *= smoothstep(1.25, 0.30, length(uv - 0.5));            // vignette
-  col = mix(col * 0.5, col, 0.76);                            // keep it deep for contrast
-  col += (hash(uv * (u_time + 1.0)) - 0.5) * 0.022;           // film grain
+  vec3 col = mix(u_deep, u_c2, clamp(f * 1.30, 0.0, 1.0));
+  col = mix(col, u_c1, clamp(length(r) * 0.60, 0.0, 1.0));
+  col = mix(col, u_c3, clamp(q.x * q.y * 1.10, 0.0, 1.0));   // subtle warmth
+  col += u_c1 * pow(f, 3.0) * 0.45;                          // bright cores
+  col += u_glow * pow(f, 5.0) * 0.16;                        // whisper highlight
+  col *= smoothstep(1.25, 0.30, length(uv - 0.5));           // vignette
+  col = mix(col * 0.5, col, 0.76);                           // keep it deep for contrast
+  col += (hash(uv * (u_time + 1.0)) - 0.5) * 0.022;          // film grain
 
   gl_FragColor = vec4(col, 1.0);
 }
@@ -69,11 +86,25 @@ function compile(gl: WebGLRenderingContext, type: number, src: string) {
   return sh;
 }
 
+// Live palette state — themes can repaint before or after init.
+let palette: ShaderPalette = DEFAULT_PALETTE;
+let uploadPalette: (() => void) | null = null;
+let fallbackCanvas: HTMLCanvasElement | null = null;
+
+export function setShaderPalette(next: ShaderPalette): void {
+  palette = next;
+  uploadPalette?.();
+  if (fallbackCanvas) {
+    const [r, g, b] = next.deep;
+    fallbackCanvas.style.background = `rgb(${Math.round(r * 255 + 4)}, ${Math.round(g * 255 + 4)}, ${Math.round(b * 255 + 10)})`;
+  }
+}
+
 export function initShaderBackground(canvasId: string): void {
   const canvas = document.getElementById(canvasId) as HTMLCanvasElement | null;
   if (!canvas) return;
   const gl = (canvas.getContext("webgl") || canvas.getContext("experimental-webgl")) as WebGLRenderingContext | null;
-  if (!gl) { canvas.style.background = "#070a16"; return; }
+  if (!gl) { fallbackCanvas = canvas; setShaderPalette(palette); return; }
 
   const prog = gl.createProgram();
   const vs = compile(gl, gl.VERTEX_SHADER, VERT);
@@ -93,7 +124,21 @@ export function initShaderBackground(canvasId: string): void {
 
   const uRes = gl.getUniformLocation(prog, "u_res");
   const uTime = gl.getUniformLocation(prog, "u_time");
+  const uDeep = gl.getUniformLocation(prog, "u_deep");
+  const uC1 = gl.getUniformLocation(prog, "u_c1");
+  const uC2 = gl.getUniformLocation(prog, "u_c2");
+  const uC3 = gl.getUniformLocation(prog, "u_c3");
+  const uGlow = gl.getUniformLocation(prog, "u_glow");
   const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+
+  uploadPalette = () => {
+    gl.uniform3fv(uDeep, palette.deep);
+    gl.uniform3fv(uC1, palette.c1);
+    gl.uniform3fv(uC2, palette.c2);
+    gl.uniform3fv(uC3, palette.c3);
+    gl.uniform3fv(uGlow, palette.glow);
+  };
+  uploadPalette();
 
   function resize() {
     const w = Math.max(1, Math.floor(canvas!.clientWidth * dpr));

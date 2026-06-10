@@ -751,6 +751,13 @@ function createDefaultMockAdapters() {
 }
 
 // src/shaderBg.ts
+var DEFAULT_PALETTE = {
+  deep: [0.02, 0.028, 0.045],
+  c1: [0.3, 0.7, 1],
+  c2: [0.4, 0.46, 0.7],
+  c3: [0.85, 0.55, 0.28],
+  glow: [0.16, 1, 0.5]
+};
 var VERT = `
 attribute vec2 p;
 void main() { gl_Position = vec4(p, 0.0, 1.0); }
@@ -759,6 +766,11 @@ var FRAG = `
 precision highp float;
 uniform vec2 u_res;
 uniform float u_time;
+uniform vec3 u_deep;
+uniform vec3 u_c1;
+uniform vec3 u_c2;
+uniform vec3 u_c3;
+uniform vec3 u_glow;
 
 float hash(vec2 p) {
   p = fract(p * vec2(123.34, 345.45));
@@ -791,19 +803,14 @@ void main() {
                 fbm(p + 1.5 * q + vec2(8.3, 2.8) - 0.5 * t));
   float f = fbm(p + 1.6 * r);
 
-  vec3 deep  = vec3(0.020, 0.028, 0.045);  // gunmetal
-  vec3 steel = vec3(0.30, 0.70, 1.00);     // steel cyan
-  vec3 slate = vec3(0.40, 0.46, 0.70);     // slate blue
-  vec3 amber = vec3(0.85, 0.55, 0.28);     // warm metal
-
-  vec3 col = mix(deep, slate, clamp(f * 1.30, 0.0, 1.0));
-  col = mix(col, steel, clamp(length(r) * 0.60, 0.0, 1.0));
-  col = mix(col, amber, clamp(q.x * q.y * 1.10, 0.0, 1.0));   // subtle warmth
-  col += steel * pow(f, 3.0) * 0.45;                          // cool cores
-  col += vec3(0.16, 1.0, 0.50) * pow(f, 5.0) * 0.16;          // whisper of terminal green
-  col *= smoothstep(1.25, 0.30, length(uv - 0.5));            // vignette
-  col = mix(col * 0.5, col, 0.76);                            // keep it deep for contrast
-  col += (hash(uv * (u_time + 1.0)) - 0.5) * 0.022;           // film grain
+  vec3 col = mix(u_deep, u_c2, clamp(f * 1.30, 0.0, 1.0));
+  col = mix(col, u_c1, clamp(length(r) * 0.60, 0.0, 1.0));
+  col = mix(col, u_c3, clamp(q.x * q.y * 1.10, 0.0, 1.0));   // subtle warmth
+  col += u_c1 * pow(f, 3.0) * 0.45;                          // bright cores
+  col += u_glow * pow(f, 5.0) * 0.16;                        // whisper highlight
+  col *= smoothstep(1.25, 0.30, length(uv - 0.5));           // vignette
+  col = mix(col * 0.5, col, 0.76);                           // keep it deep for contrast
+  col += (hash(uv * (u_time + 1.0)) - 0.5) * 0.022;          // film grain
 
   gl_FragColor = vec4(col, 1.0);
 }
@@ -815,12 +822,24 @@ function compile(gl, type, src) {
   gl.compileShader(sh);
   return sh;
 }
+var palette = DEFAULT_PALETTE;
+var uploadPalette = null;
+var fallbackCanvas = null;
+function setShaderPalette(next) {
+  palette = next;
+  uploadPalette?.();
+  if (fallbackCanvas) {
+    const [r, g, b] = next.deep;
+    fallbackCanvas.style.background = `rgb(${Math.round(r * 255 + 4)}, ${Math.round(g * 255 + 4)}, ${Math.round(b * 255 + 10)})`;
+  }
+}
 function initShaderBackground(canvasId) {
   const canvas = document.getElementById(canvasId);
   if (!canvas) return;
   const gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
   if (!gl) {
-    canvas.style.background = "#070a16";
+    fallbackCanvas = canvas;
+    setShaderPalette(palette);
     return;
   }
   const prog = gl.createProgram();
@@ -839,7 +858,20 @@ function initShaderBackground(canvasId) {
   gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
   const uRes = gl.getUniformLocation(prog, "u_res");
   const uTime = gl.getUniformLocation(prog, "u_time");
+  const uDeep = gl.getUniformLocation(prog, "u_deep");
+  const uC1 = gl.getUniformLocation(prog, "u_c1");
+  const uC2 = gl.getUniformLocation(prog, "u_c2");
+  const uC3 = gl.getUniformLocation(prog, "u_c3");
+  const uGlow = gl.getUniformLocation(prog, "u_glow");
   const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+  uploadPalette = () => {
+    gl.uniform3fv(uDeep, palette.deep);
+    gl.uniform3fv(uC1, palette.c1);
+    gl.uniform3fv(uC2, palette.c2);
+    gl.uniform3fv(uC3, palette.c3);
+    gl.uniform3fv(uGlow, palette.glow);
+  };
+  uploadPalette();
   function resize() {
     const w = Math.max(1, Math.floor(canvas.clientWidth * dpr));
     const h = Math.max(1, Math.floor(canvas.clientHeight * dpr));
@@ -1102,7 +1134,7 @@ function setLastTab(lastTab) {
 
 // src/settings.ts
 var KEY3 = "helpme.settings.v1";
-var DEFAULTS = { trickleMs: 4500, trickle: true };
+var DEFAULTS = { trickleMs: 4500, trickle: true, theme: "garage" };
 var settings = { ...DEFAULTS };
 var listeners3 = /* @__PURE__ */ new Set();
 async function hydrateSettings() {
@@ -1125,7 +1157,7 @@ function emit2() {
 
 // src/pageReaders.ts
 function pageScrapeFn(site) {
-  const txt = (el2) => (el2?.textContent || "").trim();
+  const txt = (el3) => (el3?.textContent || "").trim();
   const clip = (s, n = 280) => s.replace(/\s+/g, " ").trim().slice(0, n);
   const out = [];
   const push = (author, body, ago = "") => {
@@ -1454,6 +1486,21 @@ var HelperBridge = class {
     }
   }
 };
+async function helperTool(wrenchId, tool, args = {}) {
+  if (!cfg) return null;
+  try {
+    const res = await fetch(`${cfg.url}/wrench/${wrenchId}/tool`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-fotw-token": cfg.token },
+      body: JSON.stringify({ tool, args })
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.ok ? { mode: data.mode, data: data.data } : null;
+  } catch {
+    return null;
+  }
+}
 async function liveHelperBridges(stationFor) {
   if (!cfg) return null;
   try {
@@ -1498,6 +1545,464 @@ function emit5() {
   listeners6.forEach((fn) => fn());
 }
 
+// src/buildBay.ts
+var STATUS_COLOR = {
+  success: "var(--lime)",
+  failure: "rgba(var(--magenta-rgb), 1)",
+  running: "var(--cyan)",
+  cancelled: "var(--faint)",
+  pending: "var(--muted)",
+  unknown: "var(--faint)"
+};
+function el(tag, cls, text) {
+  const node = document.createElement(tag);
+  if (cls) node.className = cls;
+  if (text !== void 0) node.textContent = text;
+  return node;
+}
+var mins = (ms) => typeof ms === "number" ? `${Math.round(ms / 6e3) / 10}m` : "\u2014";
+var since = (iso) => {
+  if (!iso) return "";
+  const m = Math.round((Date.now() - Date.parse(iso)) / 6e4);
+  if (!Number.isFinite(m) || m < 0) return "";
+  if (m < 60) return `${m}m ago`;
+  if (m < 2880) return `${Math.round(m / 60)}h ago`;
+  return `${Math.round(m / 1440)}d ago`;
+};
+var DEMO_PIPELINES = [
+  { id: "ci.yml", name: "CI" },
+  { id: "nightly.yml", name: "Nightly Cook" },
+  { id: "deploy.yml", name: "Steam Deploy" }
+];
+var M = 6e4;
+var demoAgo = (m) => new Date(Date.now() - m * M).toISOString();
+var DEMO_BUILDS = {
+  "ci.yml": [
+    { id: "842", number: 842, status: "failure", branch: "main", title: "Tune factory boss intro timing", finishedAt: demoAgo(34), durationMs: 14 * M },
+    { id: "841", number: 841, status: "success", branch: "main", title: "Add cutscene asset preload", finishedAt: demoAgo(170), durationMs: 13 * M },
+    { id: "840", number: 840, status: "success", branch: "feature/boss-arena", title: "Boss arena nav mesh rebake", finishedAt: demoAgo(300), durationMs: 15 * M },
+    { id: "839", number: 839, status: "failure", branch: "main", title: "Upgrade physics plugin", finishedAt: demoAgo(420), durationMs: 12 * M },
+    { id: "838", number: 838, status: "success", branch: "main", title: "Localization pass 7", finishedAt: demoAgo(560), durationMs: 14 * M },
+    { id: "837", number: 837, status: "success", branch: "main", title: "Audio bank rebuild", finishedAt: demoAgo(700), durationMs: 13 * M }
+  ],
+  "nightly.yml": [
+    { id: "311", number: 311, status: "success", branch: "main", title: "Nightly cook + lightmaps", finishedAt: demoAgo(540), durationMs: 96 * M },
+    { id: "310", number: 310, status: "success", branch: "main", title: "Nightly cook + lightmaps", finishedAt: demoAgo(1980), durationMs: 92 * M },
+    { id: "309", number: 309, status: "cancelled", branch: "main", title: "Nightly cook + lightmaps", finishedAt: demoAgo(3420), durationMs: 12 * M }
+  ],
+  "deploy.yml": [
+    { id: "57", number: 57, status: "success", branch: "release/1.4", title: "Steam depot push 1.4.2", finishedAt: demoAgo(2880), durationMs: 22 * M },
+    { id: "56", number: 56, status: "success", branch: "release/1.4", title: "Steam depot push 1.4.1", finishedAt: demoAgo(10080), durationMs: 21 * M }
+  ]
+};
+var DEMO_PROVIDERS = [
+  { provider: "github-actions", label: "GitHub Actions", configured: true },
+  { provider: "jenkins", label: "Jenkins", configured: false, setup: "Set JENKINS_URL + JENKINS_USER + JENKINS_TOKEN." }
+];
+var DEMO_FAILURE = {
+  buildId: "842",
+  failedStep: "Cook content (Win64)",
+  errorLines: [
+    "LogCook: Error: Couldn't find file for package /Game/Cutscenes/BossIntro requested by async loading code.",
+    "LogWindows: Error: NullRef in BossIntroSequence.PlayCutscene()",
+    "CookResults: Error: Cook failed \u2014 1 package failed to save."
+  ]
+};
+async function loadBayData() {
+  const prov = await helperTool("def", "bw_list_providers");
+  if (!prov) {
+    return {
+      mode: "demo",
+      providers: DEMO_PROVIDERS,
+      pipelines: DEMO_PIPELINES.map((p) => ({ pipeline: p, builds: DEMO_BUILDS[p.id] ?? [] })),
+      failure: DEMO_FAILURE
+    };
+  }
+  const mode = prov.mode;
+  const pipes = await helperTool("def", "bw_list_pipelines");
+  const pipelines = [];
+  let freshestFailure = null;
+  for (const pipeline of (pipes?.data.pipelines ?? []).slice(0, 4)) {
+    const res = await helperTool("def", "bw_list_builds", { pipeline: pipeline.id, limit: 6 });
+    const builds = res?.data.builds ?? [];
+    pipelines.push({ pipeline, builds });
+    const latest = builds[0];
+    if (latest?.status === "failure") {
+      const prevTime = freshestFailure?.build.finishedAt ?? "";
+      if (!freshestFailure || (latest.finishedAt ?? "") > prevTime) freshestFailure = { pipeline, build: latest };
+    }
+  }
+  let failure = null;
+  if (freshestFailure) {
+    const res = await helperTool("def", "bw_summarize_failure", {
+      buildId: freshestFailure.build.id,
+      pipeline: freshestFailure.pipeline.id
+    });
+    if (res) {
+      failure = {
+        buildId: freshestFailure.build.id,
+        ...res.data.failedStep !== void 0 ? { failedStep: res.data.failedStep } : {},
+        errorLines: res.data.errorLines ?? []
+      };
+    }
+  }
+  return { mode, providers: prov.data.providers ?? [], pipelines, failure };
+}
+function hpBar(rate) {
+  const wrap = el("div", "hp");
+  const bar = el("div", "hpbar");
+  const fill = el("i");
+  const pct = rate === null ? 0 : Math.round(rate * 100);
+  fill.style.width = `${pct}%`;
+  fill.className = rate === null ? "" : rate >= 0.8 ? "good" : rate >= 0.5 ? "warn" : "crit";
+  bar.append(fill);
+  wrap.append(bar, el("span", "hpval", rate === null ? "\u2014" : `${pct}%`));
+  return wrap;
+}
+function comboStrip(builds) {
+  const strip = el("div", "combo");
+  for (const b of [...builds].reverse()) {
+    const cell = el("span", `cell ${b.status}`);
+    cell.title = `#${b.number ?? b.id} ${b.status}${b.branch ? ` \xB7 ${b.branch}` : ""}${b.title ? ` \xB7 ${b.title}` : ""}`;
+    strip.append(cell);
+  }
+  return strip;
+}
+function pipelineCard(pipeline, builds) {
+  const card = el("div", "pipecard card glass lux");
+  const latest = builds[0];
+  const head = el("div", "pipehead");
+  const orb = el("span", "orb");
+  orb.style.color = STATUS_COLOR[latest?.status ?? "unknown"] ?? "var(--faint)";
+  if (latest?.status === "running") orb.classList.add("spin");
+  head.append(orb, el("span", "pipename", pipeline.name));
+  head.append(el("span", "pipetime", latest ? since(latest.finishedAt) : "no builds"));
+  card.append(head);
+  if (latest) {
+    const sub = el("div", "pipesub");
+    sub.append(el("span", `pstat ${latest.status}`, latest.status.toUpperCase()));
+    if (latest.branch) sub.append(el("span", "pbranch", latest.branch));
+    if (latest.title) sub.append(el("span", "ptitle", latest.title));
+    card.append(sub);
+  }
+  const decided = builds.filter((b) => b.status === "success" || b.status === "failure");
+  const rate = decided.length ? decided.filter((b) => b.status === "success").length / decided.length : null;
+  const stats = el("div", "pipestats");
+  const hpwrap = el("div", "stat");
+  hpwrap.append(el("span", "statlabel", "Stability"), hpBar(rate));
+  const durs = builds.map((b) => b.durationMs).filter((d) => typeof d === "number");
+  const avg = durs.length ? durs.reduce((a, b) => a + b, 0) / durs.length : void 0;
+  const dur = el("div", "stat");
+  dur.append(el("span", "statlabel", "Avg build"), el("span", "statval", mins(avg)));
+  stats.append(hpwrap, dur);
+  card.append(stats);
+  const comboWrap = el("div", "stat");
+  comboWrap.append(el("span", "statlabel", `Last ${builds.length}`), comboStrip(builds));
+  card.append(comboWrap);
+  return card;
+}
+function failureCard(failure, onThread) {
+  const card = el("div", "failcard card glass lux");
+  const head = el("div", "failhead");
+  head.append(el("span", "failsig", "\u258C\u258C"), el("span", "failtitle", "Freshest failure"), el("span", "failref", `#${failure.buildId}`));
+  card.append(head);
+  if (failure.failedStep) {
+    const step = el("div", "failstep");
+    step.append(el("span", "steplabel", "FAILED AT"), el("span", "stepname", failure.failedStep));
+    card.append(step);
+  }
+  const term = el("div", "termlog");
+  for (const line of failure.errorLines.slice(0, 4)) {
+    const row = el("div", "termline");
+    row.append(el("span", "prompt", "\u2717"), el("span", void 0, line));
+    term.append(row);
+  }
+  card.append(term);
+  const bar = el("div", "bbar");
+  const threadBtn = el("button", "btn2 go", "Thread it to the community \u2726");
+  threadBtn.addEventListener("click", () => {
+    const topic = failure.failedStep ?? failure.errorLines[0] ?? "latest build failure";
+    onThread(topic);
+  });
+  bar.append(threadBtn);
+  card.append(bar);
+  card.append(el("div", "addhint", "Parse-only signals from DefWrench \u2014 the evidence, not a verdict."));
+  return card;
+}
+function buildBayView(onThread) {
+  const view = el("div", "view");
+  view.id = "view-bay";
+  const head = el("div", "bayhead");
+  const title = el("div", "baytitle");
+  const ico = el("span", "bayico", "\u2692");
+  title.append(ico, el("span", void 0, "Build Bay"), el("span", "baysub", "DefWrench"));
+  const badge = el("span", "live");
+  badge.append(el("span", "pulse"), document.createTextNode("\u2026"));
+  head.append(title, badge);
+  view.append(head);
+  const body = el("div", "viewscroll");
+  const loading = el("div", "card glass lux");
+  loading.append(el("div", "skel w40"), el("div", "skel w90"), el("div", "skel w70"));
+  body.append(loading);
+  view.append(body);
+  const render = (data) => {
+    body.innerHTML = "";
+    badge.innerHTML = "";
+    badge.append(el("span", "pulse"));
+    badge.append(document.createTextNode(data.mode === "mcp" ? "Live \xB7 your wrench" : data.mode === "mock" ? "Demo \xB7 helper" : "Demo"));
+    if (data.mode === "mcp") badge.classList.add("on");
+    const provRow = el("div", "provrow");
+    for (const p of data.providers) {
+      const chip = el("span", `prov ${p.configured ? "on" : "off"}`);
+      const led = el("span", "led");
+      chip.append(led, document.createTextNode(p.label));
+      if (!p.configured && p.setup) chip.title = p.setup;
+      provRow.append(chip);
+    }
+    body.append(provRow);
+    if (!data.pipelines.length) {
+      const empty = el("div", "card glass");
+      empty.append(el("div", "addhint", "No pipelines found. If your wrench is live, check the project root / credentials in its config (bw_list_providers has hints)."));
+      body.append(empty);
+    }
+    const grid = el("div", "baygrid");
+    for (const { pipeline, builds } of data.pipelines) grid.append(pipelineCard(pipeline, builds));
+    body.append(grid);
+    if (data.failure && data.failure.errorLines.length) {
+      body.append(failureCard(data.failure, onThread));
+    }
+    const refresh = el("button", "dbtn", "\u21BB Refresh");
+    refresh.addEventListener("click", async () => {
+      refresh.disabled = true;
+      try {
+        render(await loadBayData());
+      } finally {
+        refresh.disabled = false;
+      }
+    });
+    const bar = el("div", "bayfoot");
+    bar.append(refresh);
+    body.append(bar);
+  };
+  loadBayData().then(render).catch(() => {
+    body.innerHTML = "";
+    const err = el("div", "card glass");
+    err.append(el("div", "addhint", "Couldn't read build data. Check the local helper in Settings."));
+    body.append(err);
+  });
+  return view;
+}
+
+// src/themes.ts
+var BODY_SANS = `ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`;
+var MONO = `"Cascadia Code", Consolas, "JetBrains Mono", "Fira Code", ui-monospace, monospace`;
+function vars(v) {
+  return {
+    "--bg": v.bg,
+    "--ink": v.ink,
+    "--muted": v.muted,
+    "--faint": v.faint,
+    "--cyan": v.c1,
+    "--cyan-rgb": v.c1rgb,
+    "--violet": v.c2,
+    "--violet-rgb": v.c2rgb,
+    "--magenta": v.c3,
+    "--magenta-rgb": v.c3rgb,
+    "--lime": v.lime,
+    "--lime-rgb": v.limergb,
+    "--amber": v.amber,
+    "--amber-rgb": v.amberrgb,
+    "--grad": v.grad,
+    "--grad-soft": v.gradSoft,
+    "--font-body": v.fontBody ?? BODY_SANS,
+    "--font-display": v.fontDisplay ?? (v.fontBody ?? BODY_SANS),
+    "--font-mono": MONO,
+    "--radius": v.radius ?? "20px"
+  };
+}
+var THEMES = [
+  {
+    id: "garage",
+    label: "Night Garage",
+    tagline: "Gunmetal, steel & copper \u2014 the workshop after hours",
+    chips: ["#38e8ff", "#e0964a", "#7d88c8"],
+    vars: vars({
+      bg: "#05060c",
+      ink: "#eaf2ff",
+      muted: "#9aa6c4",
+      faint: "#6b7799",
+      c1: "#38e8ff",
+      c1rgb: "56,232,255",
+      c2: "#8b5cff",
+      c2rgb: "139,92,255",
+      c3: "#ff4d9d",
+      c3rgb: "255,77,157",
+      lime: "#b6ff5a",
+      limergb: "182,255,90",
+      amber: "#ffc14d",
+      amberrgb: "255,193,77",
+      grad: "linear-gradient(135deg, #38e8ff 0%, #8b5cff 48%, #ff4d9d 100%)",
+      gradSoft: "linear-gradient(135deg, rgba(56,232,255,.22), rgba(139,92,255,.22) 50%, rgba(255,77,157,.22))"
+    }),
+    shader: { deep: [0.02, 0.028, 0.045], c1: [0.3, 0.7, 1], c2: [0.4, 0.46, 0.7], c3: [0.85, 0.55, 0.28], glow: [0.16, 1, 0.5] }
+  },
+  {
+    id: "synthwave",
+    label: "Speedrun Synthwave",
+    tagline: "Hot magenta on midnight violet \u2014 arcade leaderboard energy",
+    chips: ["#ff2d95", "#2de2ff", "#ff9e2d"],
+    vars: vars({
+      bg: "#0a0414",
+      ink: "#fdeaff",
+      muted: "#b48fd6",
+      faint: "#7d5fa3",
+      c1: "#ff2d95",
+      c1rgb: "255,45,149",
+      c2: "#9b4dff",
+      c2rgb: "155,77,255",
+      c3: "#2de2ff",
+      c3rgb: "45,226,255",
+      lime: "#ffe14d",
+      limergb: "255,225,77",
+      amber: "#ff9e2d",
+      amberrgb: "255,158,45",
+      grad: "linear-gradient(135deg, #ff2d95 0%, #9b4dff 48%, #2de2ff 100%)",
+      gradSoft: "linear-gradient(135deg, rgba(255,45,149,.24), rgba(155,77,255,.22) 50%, rgba(45,226,255,.22))",
+      fontDisplay: `"Avenir Next", Futura, "Segoe UI", ${BODY_SANS}`,
+      radius: "16px"
+    }),
+    shader: { deep: [0.04, 0.012, 0.08], c1: [1, 0.18, 0.58], c2: [0.55, 0.28, 0.95], c3: [0.18, 0.85, 1], glow: [1, 0.62, 0.18] }
+  },
+  {
+    id: "crt",
+    label: "CRT Phosphor",
+    tagline: "Green glass terminal \u2014 patch notes by candlelight",
+    chips: ["#2ee06a", "#ffc14d", "#d8ffe8"],
+    vars: vars({
+      bg: "#020a05",
+      ink: "#d8ffe8",
+      muted: "#7fc89a",
+      faint: "#4e8a66",
+      c1: "#2ee06a",
+      c1rgb: "46,224,106",
+      c2: "#27b3a4",
+      c2rgb: "39,179,164",
+      c3: "#ffc14d",
+      c3rgb: "255,193,77",
+      lime: "#b6ff5a",
+      limergb: "182,255,90",
+      amber: "#ffc14d",
+      amberrgb: "255,193,77",
+      grad: "linear-gradient(135deg, #2ee06a 0%, #27b3a4 55%, #ffc14d 100%)",
+      gradSoft: "linear-gradient(135deg, rgba(46,224,106,.22), rgba(39,179,164,.20) 50%, rgba(255,193,77,.18))",
+      fontBody: MONO,
+      fontDisplay: MONO,
+      radius: "10px"
+    }),
+    shader: { deep: [6e-3, 0.024, 0.013], c1: [0.12, 0.62, 0.3], c2: [0.1, 0.4, 0.32], c3: [0.6, 0.5, 0.18], glow: [0.45, 0.95, 0.35] }
+  },
+  {
+    id: "grimoire",
+    label: "Arcane Grimoire",
+    tagline: "Ink, gold leaf & ember \u2014 RPG spellbook in the dark",
+    chips: ["#e8b34a", "#9d6bff", "#ff6b4a"],
+    vars: vars({
+      bg: "#130a1e",
+      ink: "#f3e9d6",
+      muted: "#bba27f",
+      faint: "#82704f",
+      c1: "#e8b34a",
+      c1rgb: "232,179,74",
+      c2: "#9d6bff",
+      c2rgb: "157,107,255",
+      c3: "#ff6b4a",
+      c3rgb: "255,107,74",
+      lime: "#9fe06a",
+      limergb: "159,224,106",
+      amber: "#e8b34a",
+      amberrgb: "232,179,74",
+      grad: "linear-gradient(135deg, #e8b34a 0%, #ff6b4a 48%, #9d6bff 100%)",
+      gradSoft: "linear-gradient(135deg, rgba(232,179,74,.22), rgba(255,107,74,.20) 50%, rgba(157,107,255,.22))",
+      fontDisplay: `Palatino, "Palatino Linotype", "Book Antiqua", Georgia, serif`,
+      radius: "14px"
+    }),
+    shader: { deep: [0.055, 0.028, 0.085], c1: [0.9, 0.66, 0.25], c2: [0.5, 0.34, 0.85], c3: [0.95, 0.4, 0.25], glow: [1, 0.85, 0.45] }
+  },
+  {
+    id: "frostbyte",
+    label: "Frostbyte",
+    tagline: "Aurora over arctic glass \u2014 survival-crafting calm",
+    chips: ["#7adfff", "#2ee0c8", "#8b9cff"],
+    vars: vars({
+      bg: "#04101c",
+      ink: "#eaf7ff",
+      muted: "#92b4cc",
+      faint: "#5e7e96",
+      c1: "#7adfff",
+      c1rgb: "122,223,255",
+      c2: "#8b9cff",
+      c2rgb: "139,156,255",
+      c3: "#2ee0c8",
+      c3rgb: "46,224,200",
+      lime: "#bfffe0",
+      limergb: "191,255,224",
+      amber: "#ffd98a",
+      amberrgb: "255,217,138",
+      grad: "linear-gradient(135deg, #7adfff 0%, #2ee0c8 48%, #8b9cff 100%)",
+      gradSoft: "linear-gradient(135deg, rgba(122,223,255,.22), rgba(46,224,200,.20) 50%, rgba(139,156,255,.22))",
+      radius: "24px"
+    }),
+    shader: { deep: [0.012, 0.045, 0.075], c1: [0.45, 0.85, 1], c2: [0.5, 0.6, 1], c3: [0.2, 0.9, 0.78], glow: [0.75, 1, 0.9] }
+  },
+  {
+    id: "redline",
+    label: "Redline Carbon",
+    tagline: "Racing red on carbon fiber \u2014 pit-crew urgency",
+    chips: ["#ff3b30", "#ff8a3c", "#c9d1d9"],
+    vars: vars({
+      bg: "#0c0507",
+      ink: "#ffeede",
+      muted: "#c49a8a",
+      faint: "#8a655a",
+      c1: "#ff3b30",
+      c1rgb: "255,59,48",
+      c2: "#ff8a3c",
+      c2rgb: "255,138,60",
+      c3: "#ffc14d",
+      c3rgb: "255,193,77",
+      lime: "#7de08a",
+      limergb: "125,224,138",
+      amber: "#ff8a3c",
+      amberrgb: "255,138,60",
+      grad: "linear-gradient(135deg, #ff3b30 0%, #ff8a3c 52%, #ffc14d 100%)",
+      gradSoft: "linear-gradient(135deg, rgba(255,59,48,.22), rgba(255,138,60,.20) 50%, rgba(255,193,77,.18))",
+      fontDisplay: `"Segoe UI Black", "Arial Black", "Avenir Next Heavy", ${BODY_SANS}`,
+      radius: "12px"
+    }),
+    shader: { deep: [0.06, 0.018, 0.022], c1: [1, 0.28, 0.2], c2: [0.75, 0.3, 0.18], c3: [1, 0.62, 0.25], glow: [1, 0.8, 0.35] }
+  }
+];
+var THEME_KEY = "helpme.theme.v1";
+function themeById(id) {
+  return THEMES.find((t) => t.id === id) ?? THEMES[0];
+}
+function applyTheme(id) {
+  const theme = themeById(id);
+  const root = document.documentElement;
+  for (const [k, v] of Object.entries(theme.vars)) root.style.setProperty(k, v);
+  root.dataset.theme = theme.id;
+  setShaderPalette(theme.shader);
+}
+async function hydrateTheme() {
+  const id = await load(THEME_KEY, "garage");
+  applyTheme(id);
+  return id;
+}
+function setTheme(id) {
+  save(THEME_KEY, id);
+  applyTheme(id);
+}
+
 // src/sidepanel.ts
 var queueBody = null;
 var activeView = "ask";
@@ -1522,7 +2027,7 @@ var workspace = mockWorkspaceContext;
 var allAdapters = createDefaultMockAdapters();
 var adapterFor = (kind) => allAdapters.find((a) => a.kind === kind) ?? new BaseMockAdapter(kind);
 var connected2 = workspace.connectedSources.filter((s) => s.read);
-function el(tag, cls, text) {
+function el2(tag, cls, text) {
   const node = document.createElement(tag);
   if (cls) node.className = cls;
   if (text !== void 0) node.textContent = text;
@@ -1530,22 +2035,22 @@ function el(tag, cls, text) {
 }
 function meterEl(value) {
   const pct = Math.round(value * 100);
-  const wrap = el("div");
-  wrap.append(el("div", "meter-label", "Confidence"));
-  const row = el("div", "meter-wrap");
-  const m = el("div", "meter");
-  const i = el("i");
+  const wrap = el2("div");
+  wrap.append(el2("div", "meter-label", "Confidence"));
+  const row = el2("div", "meter-wrap");
+  const m = el2("div", "meter");
+  const i = el2("i");
   i.style.width = pct + "%";
   m.append(i);
-  row.append(m, el("span", "meter-val", pct + "%"));
+  row.append(m, el2("span", "meter-val", pct + "%"));
   wrap.append(row);
   return wrap;
 }
 function pillsEl(sources2) {
-  const pills = el("div", "pills");
+  const pills = el2("div", "pills");
   for (const s of sources2) {
-    const pill = el("span", "pill");
-    const led = el("span", "led");
+    const pill = el2("span", "pill");
+    const led = el2("span", "led");
     led.style.color = meta(s).color;
     pill.append(led, document.createTextNode(meta(s).label));
     pills.append(pill);
@@ -1553,59 +2058,59 @@ function pillsEl(sources2) {
   return pills;
 }
 function evidenceEl(items2) {
-  const list2 = el("div", "evlist");
+  const list2 = el2("div", "evlist");
   for (const item of items2.slice(0, 3)) {
-    const ev = el("div", "ev");
-    const top = el("div", "evtop");
-    const dot = el("span", "evdot");
+    const ev = el2("div", "ev");
+    const top = el2("div", "evtop");
+    const dot = el2("span", "evdot");
     dot.style.color = meta(item.source).color;
-    top.append(dot, el("span", "evsrc", meta(item.source).label));
+    top.append(dot, el2("span", "evsrc", meta(item.source).label));
     const c = item.confidenceSignals?.confirmationCount;
-    ev.append(top, el("div", "evsum", item.summary ?? item.title ?? ""));
-    if (typeof c === "number") ev.append(el("div", "evmeta", `${item.source} \xB7 ${c} confirmation${c === 1 ? "" : "s"}`));
+    ev.append(top, el2("div", "evsum", item.summary ?? item.title ?? ""));
+    if (typeof c === "number") ev.append(el2("div", "evmeta", `${item.source} \xB7 ${c} confirmation${c === 1 ? "" : "s"}`));
     list2.append(ev);
   }
   return list2;
 }
 function answerCard(data) {
-  const card = el("div", "card glass lux");
-  const chips = el("div", "chiprow");
-  chips.append(el("span", "chip status" + (data.status === "ok" ? " ok" : ""), (data.status ?? "ok").replace(/_/g, " ")));
-  if (data.intent) chips.append(el("span", "chip", data.intent.replace(/_/g, " ")));
+  const card = el2("div", "card glass lux");
+  const chips = el2("div", "chiprow");
+  chips.append(el2("span", "chip status" + (data.status === "ok" ? " ok" : ""), (data.status ?? "ok").replace(/_/g, " ")));
+  if (data.intent) chips.append(el2("span", "chip", data.intent.replace(/_/g, " ")));
   card.append(chips);
-  if (data.answer) card.append(el("div", "answer", data.answer));
+  if (data.answer) card.append(el2("div", "answer", data.answer));
   card.append(meterEl(data.confidence ?? 0));
   if (data.sourcesUsed?.length) {
-    card.append(el("div", "section-label", "Who's seeing it"));
+    card.append(el2("div", "section-label", "Who's seeing it"));
     card.append(pillsEl(data.sourcesUsed));
   }
   if (data.evidence?.length) {
-    card.append(el("div", "section-label", "Top evidence"));
+    card.append(el2("div", "section-label", "Top evidence"));
     card.append(evidenceEl(data.evidence));
   }
   if (data.followupQuestion) {
-    const fu = el("div", "followup");
-    fu.append(el("span", "q", "\u2726"), el("span", void 0, data.followupQuestion));
+    const fu = el2("div", "followup");
+    fu.append(el2("span", "q", "\u2726"), el2("span", void 0, data.followupQuestion));
     card.append(fu);
   }
   if (data.privacyNotice) {
-    const pv = el("div", "privacy");
-    pv.append(el("span", "dot"), el("span", void 0, data.privacyNotice));
+    const pv = el2("div", "privacy");
+    pv.append(el2("span", "dot"), el2("span", void 0, data.privacyNotice));
     card.append(pv);
   }
   return card;
 }
 function buildAskView() {
-  const view = el("div", "view");
+  const view = el2("div", "view");
   view.id = "view-ask";
-  const composer = el("div", "composer glass");
-  const ta = el("textarea");
+  const composer = el2("div", "composer glass");
+  const ta = el2("textarea");
   ta.placeholder = "Anyone else crashing at the factory boss intro?";
   composer.append(ta);
-  const snatchRow = el("div", "snatchrow");
-  const snatchBtn = el("button", "btn2", "\u{1F4F8} SnatchIt");
-  const snatchStatus = el("span", "snatchstatus", "");
-  const snatchTray = el("div", "snatchtray");
+  const snatchRow = el2("div", "snatchrow");
+  const snatchBtn = el2("button", "btn2", "\u{1F4F8} SnatchIt");
+  const snatchStatus = el2("span", "snatchstatus", "");
+  const snatchTray = el2("div", "snatchtray");
   snatchRow.append(snatchBtn, snatchStatus);
   composer.append(snatchRow, snatchTray);
   snatchBtn.addEventListener("click", async () => {
@@ -1618,11 +2123,11 @@ function buildAskView() {
       return;
     }
     snatchStatus.textContent = "Snatched \u2726";
-    const chip = el("div", "snatchchip");
-    const thumb = el("img", "snatchthumb");
+    const chip = el2("div", "snatchchip");
+    const thumb = el2("img", "snatchthumb");
     thumb.src = res.dataUrl;
     thumb.alt = "snatch";
-    const del = el("button", "snatchdel", "\u2715");
+    const del = el2("button", "snatchdel", "\u2715");
     del.title = "Remove snatch";
     del.addEventListener("click", () => {
       chip.remove();
@@ -1631,15 +2136,15 @@ function buildAskView() {
     chip.append(thumb, del);
     snatchTray.append(chip);
   });
-  composer.append(el("div", "section-label", "Send to"));
-  const targets = el("div", "targets");
+  composer.append(el2("div", "section-label", "Send to"));
+  const targets = el2("div", "targets");
   const savedTargets = getTargets(connected2.map((s) => s.source));
   const selected = new Set(savedTargets.filter((t) => connected2.some((s) => s.source === t)));
   for (const s of connected2) {
-    const chip = el("button", "target");
+    const chip = el2("button", "target");
     chip.setAttribute("aria-pressed", String(selected.has(s.source)));
     chip.style.setProperty("--tc", meta(s.source).color);
-    const led = el("span", "led");
+    const led = el2("span", "led");
     led.style.color = meta(s.source).color;
     chip.append(led, document.createTextNode(meta(s.source).label));
     chip.addEventListener("click", () => {
@@ -1652,14 +2157,14 @@ function buildAskView() {
     targets.append(chip);
   }
   composer.append(targets);
-  const bbar = el("div", "bbar");
-  const checkBtn = el("button", "btn2 go");
+  const bbar = el2("div", "bbar");
+  const checkBtn = el2("button", "btn2 go");
   checkBtn.textContent = "Check who else \u2726";
-  const blastBtn = el("button", "btn2");
+  const blastBtn = el2("button", "btn2");
   blastBtn.textContent = "Queue broadcast";
   bbar.append(checkBtn, blastBtn);
   composer.append(bbar);
-  const out = el("div", "viewscroll");
+  const out = el2("div", "viewscroll");
   view.append(composer, out);
   const targetList = () => [...selected];
   checkBtn.addEventListener("click", async () => {
@@ -1672,8 +2177,8 @@ function buildAskView() {
     if (!sel.length) return;
     checkBtn.disabled = true;
     out.innerHTML = "";
-    const loading = el("div", "card glass lux");
-    loading.append(el("div", "skel w40"), el("div", "skel w90"), el("div", "skel w70"));
+    const loading = el2("div", "card glass lux");
+    loading.append(el2("div", "skel w40"), el2("div", "skel w90"), el2("div", "skel w70"));
     out.append(loading);
     try {
       const ctx = { ...workspace, connectedSources: workspace.connectedSources.filter((s) => selected.has(s.source)) };
@@ -1681,11 +2186,11 @@ function buildAskView() {
       out.innerHTML = "";
       const local = localConfirmations(message);
       if (local.count > 0) {
-        const corr = el("div", "corr");
-        corr.append(el("span", "spark", "\u2726"));
-        const txt = el("span");
+        const corr = el2("div", "corr");
+        corr.append(el2("span", "spark", "\u2726"));
+        const txt = el2("span");
         txt.append(document.createTextNode("You confirmed this "));
-        txt.append(el("b", void 0, `${local.count}\xD7`));
+        txt.append(el2("b", void 0, `${local.count}\xD7`));
         txt.append(document.createTextNode(` from the feed across ${local.sources.map((s) => meta(s).label).join(", ")} \u2014 raising prevalence.`));
         corr.append(txt);
         out.append(corr);
@@ -1704,21 +2209,21 @@ function buildAskView() {
     const sel = targetList();
     if (!sel.length) return;
     out.innerHTML = "";
-    const card = el("div", "card glass lux");
-    card.append(el("div", "section-label", `Queued ${sel.length} draft${sel.length === 1 ? "" : "s"} \u2014 review & approve in the Queue tab`));
-    const listEl = el("div", "queued");
+    const card = el2("div", "card glass lux");
+    card.append(el2("div", "section-label", `Queued ${sel.length} draft${sel.length === 1 ? "" : "s"} \u2014 review & approve in the Queue tab`));
+    const listEl = el2("div", "queued");
     const intent = classifyIntent(message);
     for (const kind of sel) {
       const draft = composeDraft({ kind: "poll", source: kind, topic: message, intent });
       enqueue({ actionType: draft.actionType, source: kind, title: draft.title, body: draft.body, tone: "auto", recompose: { kind: "poll", topic: message, intent } });
-      const row = el("div", "qrow");
-      const led = el("span", "qled");
+      const row = el2("div", "qrow");
+      const led = el2("span", "qled");
       led.style.color = meta(kind).color;
-      row.append(led, el("span", void 0, `Poll \u2192 ${meta(kind).label}`), el("span", "qstate", "Approval"));
+      row.append(led, el2("span", void 0, `Poll \u2192 ${meta(kind).label}`), el2("span", "qstate", "Approval"));
       listEl.append(row);
     }
     card.append(listEl);
-    const cta = el("button", "btn2 go");
+    const cta = el2("button", "btn2 go");
     cta.textContent = `Review in Queue (${pendingCount()})`;
     cta.addEventListener("click", () => setActive("queue"));
     card.append(cta);
@@ -1728,25 +2233,25 @@ function buildAskView() {
 }
 var feedEls = {};
 function renderMsg(m, kind, live = false, showSource = false) {
-  const row = el("div", live ? "msg in" : "msg");
-  const av = el("div", "av", m.author.charAt(0).toUpperCase());
+  const row = el2("div", live ? "msg in" : "msg");
+  const av = el2("div", "av", m.author.charAt(0).toUpperCase());
   av.style.background = meta(kind).color;
-  const mb = el("div", "mb");
-  const mh = el("div", "mh");
-  const sd = el("span", "sdot");
+  const mb = el2("div", "mb");
+  const mh = el2("div", "mh");
+  const sd = el2("span", "sdot");
   sd.style.background = SENT[m.sentiment];
-  mh.append(sd, el("span", "mn", m.author), el("span", "role", m.role));
+  mh.append(sd, el2("span", "mn", m.author), el2("span", "role", m.role));
   if (showSource) {
-    const sb = el("span", "src", meta(kind).label);
+    const sb = el2("span", "src", meta(kind).label);
     sb.style.background = meta(kind).color;
     mh.append(sb);
   }
-  mh.append(el("span", "mt", m.ago));
-  mb.append(mh, el("div", "mtext", m.body));
-  const react = el("div", "react");
+  mh.append(el2("span", "mt", m.ago));
+  mb.append(mh, el2("div", "mtext", m.body));
+  const react = el2("div", "react");
   let up = m.up;
-  const upBtn = el("button", "rbtn", `\u25B2 ${up}`);
-  const meBtn = el("button", "rbtn", "+ me too");
+  const upBtn = el2("button", "rbtn", `\u25B2 ${up}`);
+  const meBtn = el2("button", "rbtn", "+ me too");
   meBtn.addEventListener("click", () => {
     if (meBtn.classList.contains("done")) return;
     up += 1;
@@ -1755,7 +2260,7 @@ function renderMsg(m, kind, live = false, showSource = false) {
     meBtn.textContent = "\u2713 me too";
     addSignal(m.body, kind);
   });
-  const replyBtn = el("button", "rbtn", "Draft reply");
+  const replyBtn = el2("button", "rbtn", "Draft reply");
   replyBtn.addEventListener("click", () => {
     if (replyBtn.classList.contains("queued")) return;
     const draft = composeDraft({
@@ -1777,36 +2282,36 @@ function renderMsg(m, kind, live = false, showSource = false) {
 function buildSourceView(cap) {
   const kind = cap.source;
   const m = meta(kind);
-  const view = el("div", "view");
+  const view = el2("div", "view");
   view.id = `view-${kind}`;
-  const head = el("div", "card glass");
-  const hr = el("div", "srchead");
-  const dot = el("span", "sdot");
+  const head = el2("div", "card glass");
+  const hr = el2("div", "srchead");
+  const dot = el2("span", "sdot");
   dot.style.color = m.color;
-  hr.append(dot, el("span", "sname", m.label), el("span", "sreach", cap.write === "disabled" ? "read-only" : "approval-gated"));
+  hr.append(dot, el2("span", "sname", m.label), el2("span", "sreach", cap.write === "disabled" ? "read-only" : "approval-gated"));
   head.append(hr);
-  const caps = el("div", "caps");
-  caps.append(el("span", "cap on", "read"));
-  caps.append(el("span", cap.write === "disabled" ? "cap off" : "cap warn", `write: ${cap.write.replace(/_/g, " ")}`));
-  if (cap.supportsRealtime) caps.append(el("span", "cap", "realtime"));
-  if (cap.supportsThreads) caps.append(el("span", "cap", "threads"));
+  const caps = el2("div", "caps");
+  caps.append(el2("span", "cap on", "read"));
+  caps.append(el2("span", cap.write === "disabled" ? "cap off" : "cap warn", `write: ${cap.write.replace(/_/g, " ")}`));
+  if (cap.supportsRealtime) caps.append(el2("span", "cap", "realtime"));
+  if (cap.supportsThreads) caps.append(el2("span", "cap", "threads"));
   head.append(caps);
   if (cap.approvedSpaces?.length) {
-    const spaces = el("div", "pills");
-    for (const s of cap.approvedSpaces) spaces.append(el("span", "pill", "#" + s));
+    const spaces = el2("div", "pills");
+    for (const s of cap.approvedSpaces) spaces.append(el2("span", "pill", "#" + s));
     head.append(spaces);
   }
-  const fhead = el("div", "feedhead");
-  const live = el("span", "live");
-  live.append(el("span", "pulse"), document.createTextNode("Demo"));
-  fhead.append(el("span", "section-label", `${m.label} community feed`), live);
-  const feed = el("div", "feed");
+  const fhead = el2("div", "feedhead");
+  const live = el2("span", "live");
+  live.append(el2("span", "pulse"), document.createTextNode("Demo"));
+  fhead.append(el2("span", "section-label", `${m.label} community feed`), live);
+  const feed = el2("div", "feed");
   for (const msg of recentFor(kind)) feed.append(renderMsg(msg, kind));
   feedEls[kind] = feed;
   if (kind in SITE_INFO) {
-    const bar = el("div", "livebar");
-    const status = el("span", "livestatus", "");
-    const btn = el("button", "btn2 go", "Read this page \u2726");
+    const bar = el2("div", "livebar");
+    const status = el2("span", "livestatus", "");
+    const btn = el2("button", "btn2 go", "Read this page \u2726");
     btn.addEventListener("click", async () => {
       btn.disabled = true;
       status.textContent = "Reading\u2026";
@@ -1835,7 +2340,7 @@ function buildSourceView(cap) {
       }
       for (const sm of res.messages) feed.append(renderMsg({ author: sm.author, role: "player", body: sm.body, ago: sm.ago || "now", sentiment: "neu", up: 0 }, kind, false));
       live.innerHTML = "";
-      live.append(el("span", "pulse"), document.createTextNode("Live"));
+      live.append(el2("span", "pulse"), document.createTextNode("Live"));
       status.textContent = `${res.messages.length} live messages from your ${m.label} session`;
     });
     bar.append(btn, status);
@@ -1849,13 +2354,13 @@ var pulseFeed = null;
 var pulseRotor = connected2.map((s) => ({ kind: s.source }));
 var pulseTick = 0;
 function buildPulseView() {
-  const view = el("div", "view");
+  const view = el2("div", "view");
   view.id = "view-pulse";
-  const head = el("div", "pulsehead");
-  const live = el("span", "live");
-  live.append(el("span", "pulse"), document.createTextNode("Live"));
-  head.append(el("span", "section-label", "Pulse \xB7 every connected source, interleaved"), live);
-  const feed = el("div", "feed");
+  const head = el2("div", "pulsehead");
+  const live = el2("span", "live");
+  live.append(el2("span", "pulse"), document.createTextNode("Live"));
+  head.append(el2("span", "section-label", "Pulse \xB7 every connected source, interleaved"), live);
+  const feed = el2("div", "feed");
   const seed = connected2.map((s) => ({ kind: s.source, msg: recentFor(s.source)[0] }));
   for (const s of seed) feed.append(renderMsg(s.msg, s.kind, false, true));
   pulseFeed = feed;
@@ -1867,15 +2372,15 @@ function renderQueue(container) {
   container.innerHTML = "";
   const items2 = list();
   if (items2.length === 0) {
-    const empty = el("div", "queue-empty");
-    empty.append(el("span", "big", "\u270E"), document.createTextNode("No drafts yet. Use \u201CDraft reply\u201D on a feed message, or \u201CQueue broadcast\u201D in Ask \u2014 they land here for your approval."));
+    const empty = el2("div", "queue-empty");
+    empty.append(el2("span", "big", "\u270E"), document.createTextNode("No drafts yet. Use \u201CDraft reply\u201D on a feed message, or \u201CQueue broadcast\u201D in Ask \u2014 they land here for your approval."));
     container.append(empty);
     return;
   }
   const resolved = items2.filter((i) => i.status !== "queued").length;
   if (resolved > 0) {
-    const bar = el("div", "qclearbar");
-    const clear = el("button", "dbtn", `Clear ${resolved} resolved`);
+    const bar = el2("div", "qclearbar");
+    const clear = el2("button", "dbtn", `Clear ${resolved} resolved`);
     clear.addEventListener("click", () => clearResolved());
     bar.append(clear);
     container.append(bar);
@@ -1883,29 +2388,29 @@ function renderQueue(container) {
   for (const item of items2) renderDraftCard(container, item);
 }
 function renderDraftCard(container, item) {
-  const card = el("div", "draft card glass lux");
-  const dh = el("div", "dh");
-  const kind = el("span", "dkind", ACTION_LABEL[item.actionType] ?? item.actionType);
+  const card = el2("div", "draft card glass lux");
+  const dh = el2("div", "dh");
+  const kind = el2("span", "dkind", ACTION_LABEL[item.actionType] ?? item.actionType);
   kind.style.background = meta(item.source).color;
-  const src = el("span", "dsrc");
-  const led = el("span", "led");
+  const src = el2("span", "dsrc");
+  const led = el2("span", "led");
   led.style.color = meta(item.source).color;
   src.append(led, document.createTextNode(meta(item.source).label));
-  const state = el("span", `dstate ${item.status}`, item.status);
+  const state = el2("span", `dstate ${item.status}`, item.status);
   dh.append(kind, src, state);
   card.append(dh);
-  if (item.title) card.append(el("div", "dtitle", item.title));
-  const body = el("textarea", "dbody");
+  if (item.title) card.append(el2("div", "dtitle", item.title));
+  const body = el2("textarea", "dbody");
   body.value = item.body;
   body.disabled = item.status !== "queued";
   body.addEventListener("input", () => updateBody(item.id, body.value));
   card.append(body);
   if (item.status === "queued" && item.recompose) {
-    const tr = el("div", "tonerow");
-    tr.append(el("span", "tonelabel", "Tone"));
-    const sel = el("select", "toneselect");
+    const tr = el2("div", "tonerow");
+    tr.append(el2("span", "tonelabel", "Tone"));
+    const sel = el2("select", "toneselect");
     for (const [v, label] of [["auto", "Native voice"], ["friendly", "Friendly"], ["official", "Official"], ["technical", "Technical"], ["casual", "Casual"]]) {
-      const o = el("option");
+      const o = el2("option");
       o.value = v;
       o.textContent = label;
       if ((item.tone ?? "auto") === v) o.selected = true;
@@ -1920,12 +2425,12 @@ function renderDraftCard(container, item) {
     card.append(tr);
   }
   if (item.status === "queued") {
-    const actions = el("div", "dactions");
-    const approve = el("button", "dbtn approve", "\u2713 Approve");
+    const actions = el2("div", "dactions");
+    const approve = el2("button", "dbtn approve", "\u2713 Approve");
     approve.addEventListener("click", () => setStatus(item.id, "approved"));
-    const reject = el("button", "dbtn reject", "Reject");
+    const reject = el2("button", "dbtn reject", "Reject");
     reject.addEventListener("click", () => setStatus(item.id, "rejected"));
-    const copy = el("button", "dbtn copy", "Copy");
+    const copy = el2("button", "dbtn copy", "Copy");
     copy.addEventListener("click", async () => {
       await navigator.clipboard?.writeText(body.value).catch(() => {
       });
@@ -1935,13 +2440,13 @@ function renderDraftCard(container, item) {
     actions.append(approve, reject, copy);
     card.append(actions);
   } else {
-    const row = el("div", "dactions");
+    const row = el2("div", "dactions");
     if (item.status === "approved") {
-      const pv = el("div", "privacy");
-      pv.append(el("span", "dot"), el("span", void 0, "Approved \u2014 paste into the client to post. Help Me never posts on its own."));
+      const pv = el2("div", "privacy");
+      pv.append(el2("span", "dot"), el2("span", void 0, "Approved \u2014 paste into the client to post. FOTW\xB2 never posts on its own."));
       card.append(pv);
     }
-    const del = el("button", "dbtn", "Remove");
+    const del = el2("button", "dbtn", "Remove");
     del.addEventListener("click", () => remove(item.id));
     row.append(del);
     card.append(row);
@@ -1949,10 +2454,10 @@ function renderDraftCard(container, item) {
   container.append(card);
 }
 function buildQueueView() {
-  const view = el("div", "view");
+  const view = el2("div", "view");
   view.id = "view-queue";
-  view.append(el("div", "section-label", "Approval queue \xB7 nothing posts until you approve"));
-  const body = el("div", "result");
+  view.append(el2("div", "section-label", "Approval queue \xB7 nothing posts until you approve"));
+  const body = el2("div", "result");
   queueBody = body;
   renderQueue(body);
   view.append(body);
@@ -1963,22 +2468,22 @@ var indicator = document.getElementById("ind");
 var views = document.getElementById("views");
 var CUSTOM_COLORS = ["#4cc2ff", "#7d88c8", "#e0964a", "#2ee06a", "#66c0f4", "#c9d1d9"];
 function buildCustomFeedView(cs) {
-  const view = el("div", "view");
+  const view = el2("div", "view");
   view.id = `view-${cs.id}`;
-  const head = el("div", "card glass");
-  const hr = el("div", "srchead");
-  const dot = el("span", "sdot");
+  const head = el2("div", "card glass");
+  const hr = el2("div", "srchead");
+  const dot = el2("span", "sdot");
   dot.style.color = cs.color;
-  hr.append(dot, el("span", "sname", cs.label), el("span", "sreach", cs.type));
-  head.append(hr, el("div", "addhint", cs.url));
-  const feed = el("div", "feed");
-  feed.append(el("div", "addhint", "Loading\u2026"));
+  hr.append(dot, el2("span", "sname", cs.label), el2("span", "sreach", cs.type));
+  head.append(hr, el2("div", "addhint", cs.url));
+  const feed = el2("div", "feed");
+  feed.append(el2("div", "addhint", "Loading\u2026"));
   view.append(head, feed);
   const adapter = new CustomSourceAdapter({ id: cs.id, label: cs.label, type: cs.type, url: cs.url });
   adapter.getThread({ source: "forum", externalId: cs.id }, workspace).then((thread) => {
     feed.innerHTML = "";
     if (!thread.items.length) {
-      feed.append(el("div", "addhint", "No items yet (or the source blocked the request from the browser)."));
+      feed.append(el2("div", "addhint", "No items yet (or the source blocked the request from the browser)."));
       return;
     }
     for (const it of thread.items.slice(0, 12)) {
@@ -1986,48 +2491,48 @@ function buildCustomFeedView(cs) {
     }
   }).catch(() => {
     feed.innerHTML = "";
-    feed.append(el("div", "addhint", "Couldn't reach that source from the browser."));
+    feed.append(el2("div", "addhint", "Couldn't reach that source from the browser."));
   });
   return view;
 }
 function buildAddView() {
-  const view = el("div", "view");
+  const view = el2("div", "view");
   view.id = "view-add";
-  const form = el("div", "addform card glass");
-  form.append(el("div", "section-label", "Add a custom source"));
-  const nameWrap = el("div");
-  nameWrap.append(el("label", void 0, "Name"));
-  const name = el("input");
+  const form = el2("div", "addform card glass");
+  form.append(el2("div", "section-label", "Add a custom source"));
+  const nameWrap = el2("div");
+  nameWrap.append(el2("label", void 0, "Name"));
+  const name = el2("input");
   name.placeholder = "My Game Forum";
   nameWrap.append(name);
-  const row = el("div", "row2");
-  const typeWrap = el("div");
-  typeWrap.append(el("label", void 0, "Type"));
-  const type = el("select");
+  const row = el2("div", "row2");
+  const typeWrap = el2("div");
+  typeWrap.append(el2("label", void 0, "Type"));
+  const type = el2("select");
   for (const [v, t] of [["discourse", "Discourse forum"], ["rss", "RSS / Atom feed"]]) {
-    const o = el("option");
+    const o = el2("option");
     o.value = v;
     o.textContent = t;
     type.append(o);
   }
   typeWrap.append(type);
-  const colorWrap = el("div");
-  colorWrap.append(el("label", void 0, "Accent"));
-  const color = el("select");
+  const colorWrap = el2("div");
+  colorWrap.append(el2("label", void 0, "Accent"));
+  const color = el2("select");
   for (const c of CUSTOM_COLORS) {
-    const o = el("option");
+    const o = el2("option");
     o.value = c;
     o.textContent = c;
     color.append(o);
   }
   colorWrap.append(color);
   row.append(typeWrap, colorWrap);
-  const urlWrap = el("div");
-  urlWrap.append(el("label", void 0, "URL"));
-  const url = el("input");
+  const urlWrap = el2("div");
+  urlWrap.append(el2("label", void 0, "URL"));
+  const url = el2("input");
   url.placeholder = "https://forum.mygame.com  or  https://site.com/feed.xml";
   urlWrap.append(url);
-  const add = el("button", "primary");
+  const add = el2("button", "primary");
   add.textContent = "Add source \u2726";
   add.addEventListener("click", () => {
     const label = name.value.trim();
@@ -2041,21 +2546,21 @@ function buildAddView() {
     url.value = "";
   });
   form.append(nameWrap, row, urlWrap, add);
-  form.append(el("div", "addhint", "Discourse forums expose a public JSON API. RSS/Atom works for devlogs, patch-note feeds, and many forums. Read-only \u2014 nothing is ever posted. Some sites may block browser requests (CORS); those still work via the team app / MCP."));
+  form.append(el2("div", "addhint", "Discourse forums expose a public JSON API. RSS/Atom works for devlogs, patch-note feeds, and many forums. Read-only \u2014 nothing is ever posted. Some sites may block browser requests (CORS); those still work via the team app / MCP."));
   view.append(form);
-  const mine = el("div", "result");
+  const mine = el2("div", "result");
   const renderMine = () => {
     mine.innerHTML = "";
     const all = listCustom();
     if (!all.length) return;
-    mine.append(el("div", "section-label", "Your sources"));
+    mine.append(el2("div", "section-label", "Your sources"));
     for (const cs of all) {
-      const r = el("div", "mysrc");
-      const led = el("span", "led");
+      const r = el2("div", "mysrc");
+      const led = el2("span", "led");
       led.style.color = cs.color;
-      const meta2 = el("div");
-      meta2.append(el("div", "mn", cs.label), el("div", "mu", `${cs.type} \xB7 ${cs.url}`));
-      const rm = el("button", "dbtn rm", "Remove");
+      const meta2 = el2("div");
+      meta2.append(el2("div", "mn", cs.label), el2("div", "mu", `${cs.type} \xB7 ${cs.url}`));
+      const rm = el2("button", "dbtn rm", "Remove");
       rm.addEventListener("click", () => removeCustom(cs.id));
       r.append(led, meta2, rm);
       mine.append(r);
@@ -2072,22 +2577,22 @@ var WRENCH_STATIONS = [FOTW_STATION, MOD_STATION, DEF_STATION, MYNE_STATION];
 var wrenchBridges = createMockWrenchBridges();
 var rackThreadHost = null;
 function buildRackView() {
-  const view = el("div", "view");
+  const view = el2("div", "view");
   view.id = "view-rack";
-  const rack = el("div", "rack");
-  rack.append(el("div", "section-label", "Your wrenches \xB7 pair the ones you run"));
-  const pegboard = el("div", "pegboard");
+  const rack = el2("div", "rack");
+  rack.append(el2("div", "section-label", "Your wrenches \xB7 pair the ones you run"));
+  const pegboard = el2("div", "pegboard");
   for (const st of WRENCH_STATIONS) {
-    const card = el("button", "wrenchcard");
+    const card = el2("button", "wrenchcard");
     card.style.setProperty("--wc", st.color);
     card.setAttribute("aria-pressed", String(isPaired(st.id)));
     card.setAttribute("data-available", String(st.available));
-    const name = el("div", "wname");
-    const ico = el("div", "wico", st.label.charAt(0));
+    const name = el2("div", "wname");
+    const ico = el2("div", "wico", st.label.charAt(0));
     ico.style.background = st.color;
     name.append(ico, document.createTextNode(st.label));
-    card.append(name, el("div", "wtag", st.tagline));
-    const state = el("div", `wstate ${isPaired(st.id) ? "on" : "off"}`, st.id === "fotw" ? "cockpit" : isPaired(st.id) ? "paired" : "tap to pair");
+    card.append(name, el2("div", "wtag", st.tagline));
+    const state = el2("div", `wstate ${isPaired(st.id) ? "on" : "off"}`, st.id === "fotw" ? "cockpit" : isPaired(st.id) ? "paired" : "tap to pair");
     card.append(state);
     card.addEventListener("click", () => {
       togglePair(st.id);
@@ -2098,16 +2603,18 @@ function buildRackView() {
     pegboard.append(card);
   }
   rack.append(pegboard);
-  rack.append(el("div", "section-label", "Cross-wrench thread"));
-  const composer = el("div", "composer glass");
-  const ta = el("textarea");
+  rack.append(el2("div", "section-label", "Cross-wrench thread"));
+  const composer = el2("div", "composer glass");
+  const ta = el2("textarea");
+  ta.id = "rack-topic";
   ta.placeholder = "What are you chasing? e.g. 'crashing at the factory boss'";
-  const bar = el("div", "composer-bar");
-  bar.append(el("span", "hint", "Threads one story across your paired wrenches"));
-  const btn = el("button", "primary", "Thread it \u2726");
+  const bar = el2("div", "composer-bar");
+  bar.append(el2("span", "hint", "Threads one story across your paired wrenches"));
+  const btn = el2("button", "primary", "Thread it \u2726");
+  btn.id = "rack-thread";
   bar.append(btn);
   composer.append(ta, bar);
-  const threadHost = el("div", "result");
+  const threadHost = el2("div", "result");
   rackThreadHost = threadHost;
   threadHost.append(emptyThread());
   btn.addEventListener("click", async () => {
@@ -2118,8 +2625,8 @@ function buildRackView() {
     }
     btn.disabled = true;
     threadHost.innerHTML = "";
-    const loading = el("div", "card glass lux");
-    loading.append(el("div", "skel w40"), el("div", "skel w90"), el("div", "skel w70"));
+    const loading = el2("div", "card glass lux");
+    loading.append(el2("div", "skel w40"), el2("div", "skel w90"), el2("div", "skel w70"));
     threadHost.append(loading);
     try {
       const paired2 = new Set(listPaired());
@@ -2135,7 +2642,7 @@ function buildRackView() {
       const active = [fotwBridge, ...wrenchSet];
       const thread = await correlate(topic, active);
       threadHost.innerHTML = "";
-      if (live) threadHost.append(el("div", "tlead", "\u25CF Live \u2014 threaded from your local wrenches"));
+      if (live) threadHost.append(el2("div", "tlead", "\u25CF Live \u2014 threaded from your local wrenches"));
       threadHost.append(renderThread(thread));
     } finally {
       btn.disabled = false;
@@ -2146,7 +2653,7 @@ function buildRackView() {
   return view;
 }
 function emptyThread() {
-  const e = el("div", "emptythread");
+  const e = el2("div", "emptythread");
   e.append(document.createTextNode("Pair your wrenches above, then thread a topic. FOTW\xB2 brings the community signal; ModWrench the likely cause; DefWrench the fix; MyneWrench the impact \u2014 one story, not six screens."));
   return e;
 }
@@ -2157,23 +2664,23 @@ var WSTATION = {
   myne: { label: "MyneWrench", color: "#2ee06a" }
 };
 function renderThread(thread) {
-  const card = el("div", "thread card glass lux");
+  const card = el2("div", "thread card glass lux");
   if (!thread.findings.length) {
     card.append(emptyThread());
     return card;
   }
-  card.append(el("div", "tlead", `\u201C${thread.topic}\u201D \u2014 threaded across ${thread.contributors.length} wrench${thread.contributors.length === 1 ? "" : "es"}`));
+  card.append(el2("div", "tlead", `\u201C${thread.topic}\u201D \u2014 threaded across ${thread.contributors.length} wrench${thread.contributors.length === 1 ? "" : "es"}`));
   card.append(meterEl(thread.confidence));
-  const chain = el("div", "chain");
+  const chain = el2("div", "chain");
   for (const f of thread.findings) {
     const ws = WSTATION[f.wrench] ?? { label: f.wrench, color: "#9aa6c4" };
-    const link = el("div", "link");
+    const link = el2("div", "link");
     link.style.setProperty("--lc", ws.color);
-    const node = el("div", "lnode", ws.label.charAt(0));
+    const node = el2("div", "lnode", ws.label.charAt(0));
     node.style.background = ws.color;
-    const body = el("div", "lbody");
-    body.append(el("div", "lwrench", ws.label), el("div", "ltitle", f.title), el("div", "ldetail", f.detail));
-    if (f.ref) body.append(el("span", "lref", f.ref));
+    const body = el2("div", "lbody");
+    body.append(el2("div", "lwrench", ws.label), el2("div", "ltitle", f.title), el2("div", "ldetail", f.detail));
+    if (f.ref) body.append(el2("span", "lref", f.ref));
     link.append(node, body);
     chain.append(link);
   }
@@ -2181,16 +2688,38 @@ function renderThread(thread) {
   return card;
 }
 function buildSettingsView() {
-  const view = el("div", "view");
+  const view = el2("div", "view");
   view.id = "view-settings";
-  const card = el("div", "addform card glass");
-  card.append(el("div", "section-label", "Settings"));
+  const themeCard = el2("div", "addform card glass");
+  themeCard.append(el2("div", "section-label", "Theme \xB7 pick your cockpit"));
+  const themeGrid = el2("div", "themegrid");
+  const currentTheme = document.documentElement.dataset.theme ?? "garage";
+  for (const t of THEMES) {
+    const b = el2("button", "themecard");
+    b.setAttribute("aria-pressed", String(t.id === currentTheme));
+    const chips = el2("div", "themechips");
+    for (const c of t.chips) {
+      const chip = el2("span", "themechip");
+      chip.style.background = c;
+      chips.append(chip);
+    }
+    b.append(chips, el2("div", "themename", t.label), el2("div", "themetag", t.tagline));
+    b.addEventListener("click", () => {
+      setTheme(t.id);
+      themeGrid.querySelectorAll(".themecard").forEach((n) => n.setAttribute("aria-pressed", "false"));
+      b.setAttribute("aria-pressed", "true");
+    });
+    themeGrid.append(b);
+  }
+  themeCard.append(themeGrid);
+  const card = el2("div", "addform card glass");
+  card.append(el2("div", "section-label", "Settings"));
   const s = getSettings();
-  const trickWrap = el("div", "setrow");
-  const trickLabel = el("label", void 0, "Live feed trickle");
-  const trick = el("select", "toneselect");
+  const trickWrap = el2("div", "setrow");
+  const trickLabel = el2("label", void 0, "Live feed trickle");
+  const trick = el2("select", "toneselect");
   for (const [v, label] of [["on", "On"], ["off", "Off"]]) {
-    const o = el("option");
+    const o = el2("option");
     o.value = v;
     o.textContent = label;
     if ((s.trickle ? "on" : "off") === v) o.selected = true;
@@ -2198,11 +2727,11 @@ function buildSettingsView() {
   }
   trick.addEventListener("change", () => setSettings({ trickle: trick.value === "on" }));
   trickWrap.append(trickLabel, trick);
-  const speedWrap = el("div", "setrow");
-  const speedLabel = el("label", void 0, "Feed speed");
-  const speed = el("select", "toneselect");
+  const speedWrap = el2("div", "setrow");
+  const speedLabel = el2("label", void 0, "Feed speed");
+  const speed = el2("select", "toneselect");
   for (const [v, label] of [["2500", "Fast"], ["4500", "Normal"], ["8000", "Slow"]]) {
-    const o = el("option");
+    const o = el2("option");
     o.value = v;
     o.textContent = label;
     if (String(s.trickleMs) === v) o.selected = true;
@@ -2212,46 +2741,55 @@ function buildSettingsView() {
   speedWrap.append(speedLabel, speed);
   card.append(trickWrap, speedWrap);
   const helper = getHelper();
-  card.append(el("div", "section-label", "Local helper (Rack \u2194 your wrenches)"));
-  const hUrl = el("input", "toneselect");
+  card.append(el2("div", "section-label", "Local helper (Rack \u2194 your wrenches)"));
+  const hUrl = el2("input", "toneselect");
   hUrl.placeholder = "http://127.0.0.1:7717";
   hUrl.value = helper?.url ?? "";
   hUrl.style.width = "100%";
-  const hTok = el("input", "toneselect");
+  const hTok = el2("input", "toneselect");
   hTok.placeholder = "helper token (printed when you start it)";
   hTok.value = helper?.token ?? "";
   hTok.style.width = "100%";
-  const hStatus = el("div", "addhint", helper ? "saved \u2014 open the Rack and Thread it to go live" : "not connected \u2014 Rack uses demo wrench data");
-  const hSave = el("button", "dbtn", "Save helper");
+  const hStatus = el2("div", "addhint", helper ? "saved \u2014 open the Rack and Thread it to go live" : "not connected \u2014 Rack uses demo wrench data");
+  const hSave = el2("button", "dbtn", "Save helper");
   hSave.addEventListener("click", async () => {
     setHelper(hUrl.value.trim(), hTok.value.trim());
     hStatus.textContent = "Checking\u2026";
     const live = await liveHelperBridges(() => FOTW_STATION);
     hStatus.textContent = live ? `\u25CF connected \u2014 ${live.length} wrench${live.length === 1 ? "" : "es"} reachable` : "saved, but helper not reachable yet (start it, then re-save)";
   });
-  const hRow = el("div", "addform");
+  const hRow = el2("div", "addform");
   hRow.append(hUrl, hTok, hSave, hStatus);
   card.append(hRow);
-  const danger = el("div", "addform");
-  danger.append(el("div", "section-label", "Data"));
-  const clearQ = el("button", "dbtn", "Clear all drafts");
+  const danger = el2("div", "addform");
+  danger.append(el2("div", "section-label", "Data"));
+  const clearQ = el2("button", "dbtn", "Clear all drafts");
   clearQ.addEventListener("click", () => {
     list().slice().forEach((q) => remove(q.id));
   });
-  const clearAll = el("button", "dbtn reject", "Reset everything (drafts, sources, prefs)");
+  const clearAll = el2("button", "dbtn reject", "Reset everything (drafts, sources, prefs)");
   clearAll.addEventListener("click", () => {
     if (typeof chrome !== "undefined" && chrome.storage?.local) chrome.storage.local.clear(() => location.reload());
   });
   danger.append(clearQ, clearAll);
-  danger.append(el("div", "addhint", "Stored data is local to this browser: your drafts, custom sources, target picks, and settings. No tokens or fetched messages are ever stored."));
-  view.append(card, danger);
+  danger.append(el2("div", "addhint", "Stored data is local to this browser: your drafts, custom sources, target picks, and settings. No tokens or fetched messages are ever stored."));
+  view.append(themeCard, card, danger);
   return view;
+}
+function threadOnRack(topic) {
+  setActive("rack");
+  const ta = document.getElementById("rack-topic");
+  const btn = document.getElementById("rack-thread");
+  if (!ta || !btn) return;
+  ta.value = topic;
+  btn.click();
 }
 function rebuildNav() {
   const custom = listCustom();
   navItems = [
     { id: "ask", label: "Ask", accent: "#4cc2ff" },
     { id: "rack", label: "Rack", accent: "#7d88c8" },
+    { id: "bay", label: "Builds", accent: "#e0964a" },
     { id: "pulse", label: "Pulse", accent: "#2ee06a" },
     ...connected2.map((s) => ({ id: s.source, label: meta(s.source).label, accent: meta(s.source).color })),
     ...custom.map((c) => ({ id: c.id, label: c.label, accent: c.color })),
@@ -2263,6 +2801,7 @@ function rebuildNav() {
   views.append(
     buildAskView(),
     buildRackView(),
+    buildBayView(threadOnRack),
     buildPulseView(),
     ...connected2.map((s) => buildSourceView(s)),
     ...custom.map((c) => buildCustomFeedView(c)),
@@ -2272,11 +2811,11 @@ function rebuildNav() {
   );
   nav.querySelectorAll(".tab").forEach((b) => b.remove());
   navButtons = navItems.map((item) => {
-    const b = el("button", "tab");
+    const b = el2("button", "tab");
     b.dataset.tab = item.id;
     b.dataset.accent = item.accent;
     b.style.setProperty("--a", item.accent);
-    b.append(el("span", "led"), document.createTextNode(item.label));
+    b.append(el2("span", "led"), document.createTextNode(item.label));
     b.addEventListener("click", () => setActive(item.id));
     nav.append(b);
     return b;
@@ -2288,7 +2827,7 @@ function refreshQueueBadge() {
   if (!queueBtn) return;
   queueBtn.querySelector(".badge")?.remove();
   const n = pendingCount();
-  if (n > 0) queueBtn.append(el("span", "badge", String(n)));
+  if (n > 0) queueBtn.append(el2("span", "badge", String(n)));
 }
 onChange(() => {
   refreshQueueBadge();
@@ -2326,7 +2865,7 @@ function scheduleTrickle() {
   trickleTimer = window.setInterval(trickleTick, getSettings().trickleMs);
 }
 onSettingsChange(scheduleTrickle);
-Promise.all([hydrate(), hydratePrefs(), hydrateCustom(), hydrateSettings(), hydrateConnections(), hydrateRack(), hydrateHelper()]).then(() => {
+Promise.all([hydrate(), hydratePrefs(), hydrateCustom(), hydrateSettings(), hydrateConnections(), hydrateRack(), hydrateHelper(), hydrateTheme()]).then(() => {
   scheduleTrickle();
   rebuildNav();
   if (queueBody) renderQueue(queueBody);

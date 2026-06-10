@@ -1,8 +1,10 @@
 import { initShaderBackground } from "./shaderBg";
 import { initParallax } from "./spatial";
+import { hydrateTheme } from "./themes";
 
 initShaderBackground("bg");
 initParallax();
+hydrateTheme(); // repaint with the user's saved theme as soon as storage answers
 
 async function getActiveTab() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });

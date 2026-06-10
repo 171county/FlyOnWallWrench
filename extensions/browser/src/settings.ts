@@ -1,9 +1,9 @@
-// Persisted user settings (Settings tab): live-feed speed and data controls.
+// Persisted user settings (Settings tab): live-feed speed, theme, data controls.
 import { load, save } from "./store.js";
 
 const KEY = "helpme.settings.v1";
-export type Settings = { trickleMs: number; trickle: boolean };
-const DEFAULTS: Settings = { trickleMs: 4500, trickle: true };
+export type Settings = { trickleMs: number; trickle: boolean; theme: string };
+const DEFAULTS: Settings = { trickleMs: 4500, trickle: true, theme: "garage" };
 let settings: Settings = { ...DEFAULTS };
 const listeners = new Set<() => void>();
 

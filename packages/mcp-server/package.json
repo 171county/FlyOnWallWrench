@@ -1,17 +1,52 @@
 {
   "name": "@help-me-comms/mcp-server",
   "version": "0.1.0",
+  "description": "FOTW² (Fly On The Wall) community-intelligence MCP server for game developers, modders, and community managers: scoped community evidence, drafts, and approval-gated action plans.",
+  "license": "MIT",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
+    "fotw-mcp": "dist/index.js",
     "help-me-comms-mcp": "dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "mcpName": "io.github.171county/flyonwallwrench",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "gamedev",
+    "modding",
+    "community",
+    "discord",
+    "reddit",
+    "steam",
+    "fotw",
+    "mcpwrench"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/171county/FlyOnWallWrench.git",
+    "directory": "packages/mcp-server"
+  },
+  "homepage": "https://github.com/171county/FlyOnWallWrench#readme",
+  "bugs": {
+    "url": "https://github.com/171county/FlyOnWallWrench/issues"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "vitest run --passWithNoTests",
     "lint": "tsc -p tsconfig.json --noEmit",
-    "dev": "tsx src/index.ts"
+    "dev": "tsx src/index.ts",
+    "prepublishOnly": "pnpm build"
   },
   "dependencies": {
     "@help-me-comms/core": "workspace:*",
