@@ -22,6 +22,12 @@ The browser extension (MV3 side panel — the product)
 
 **Six themes, one cockpit.** Night Garage (default), Speedrun Synthwave, CRT Phosphor, Arcane Grimoire, Frostbyte, and Redline Carbon — full reskins (palette, typography, even the WebGL aurora) picked in Settings, persisted locally.
 
+| Build Bay · Night Garage | Theme picker | Build Bay · CRT Phosphor | Rack · Arcane Grimoire |
+|---|---|---|---|
+| ![Build Bay](docs/screenshots/2-build-bay-garage.png) | ![Themes](docs/screenshots/4-settings-themes.png) | ![CRT](docs/screenshots/6-bay-crt.png) | ![Grimoire](docs/screenshots/7-rack-grimoire.png) |
+
+More states + the full review/integration report: [docs/REPORT-2026-06-11-integration.md](docs/REPORT-2026-06-11-integration.md).
+
 ## Architecture
 
 ```
